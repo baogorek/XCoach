@@ -1,0 +1,43 @@
+{
+    "manifest_version": 3,
+    "name": "XCoach",
+    "version": "1.0",
+    "permissions": ["tabs", "declarativeNetRequest", "storage"],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "intervention.html",
+        "default_icon": {
+            "16": "images/icon16.png",
+            "32": "images/icon32.png",
+            "48": "images/icon48.png",
+            "128": "images/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "images/icon16.png",
+        "32": "images/icon32.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "host_permissions": [
+        "*://*.twitter.com/*",
+        "*://*.x.com/*"
+    ],
+    "declarative_net_request": {
+        "rule_resources": [
+            {
+                "id": "ruleset1",
+                "enabled": true,
+                "path": "rules.json"
+            }
+        ]
+    },
+    "web_accessible_resources": [
+        {
+            "resources": ["intervention.html"],
+            "matches": ["<all_urls>"]
+        }
+    ]
+}

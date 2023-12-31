@@ -17,6 +17,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                                     console.error(`Error re-enabling rules: ${chrome.runtime.lastError}`);
                                 } else {
                                     console.log("Rules re-enabled successfully");
+                                    // Start a timer to close the tab after 15 minutes
+                                    setTimeout(() => {
+                                        chrome.tabs.remove(newTab.id, () => {
+                                            if (chrome.runtime.lastError) {
+                                                console.error(`Error closing tab: ${chrome.runtime.lastError}`);
+                                            }
+                                        });
+                                    }, 0.5 * 60 * 1000); // First number is minutes
                                 }
                                 chrome.tabs.onUpdated.removeListener(tabUpdateListener);
                             });

@@ -39,5 +39,11 @@
             "resources": ["intervention.html"],
             "matches": ["<all_urls>"]
         }
+    ],
+    "content_scripts": [
+        {
+            "matches": ["*://twitter.com/*"],
+            "js": ["warn.js"]
+        }
     ]
 }

@@ -1,24 +1,3 @@
-// Is operating in a tab context. Can not reference a tab id, for instance
-
-// function startCountdown(duration, display) {
-//     let timer = duration, minutes, seconds;
-//     let countdownInterval = setInterval(function () {
-//         minutes = parseInt(timer / 60, 10);
-//         seconds = parseInt(timer % 60, 10);
-// 
-//         minutes = minutes < 10 ? "0" + minutes : minutes;
-//         seconds = seconds < 10 ? "0" + seconds : seconds;
-// 
-//         display.textContent = minutes + ":" + seconds;
-// 
-//         if (--timer < 0) {
-//             clearInterval(countdownInterval);
-//         }
-//     }, 1000);
-//     return countdownInterval;
-// }
-
-
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "warnClose") {
         let warningBanner = document.createElement('div');

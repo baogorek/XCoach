@@ -1,6 +1,70 @@
 let tabClosingTimes = {};
 let tabOriginalTimeLimits = {};
 let tabTimers = {};
+let totalOpenTimeTodayInSeconds = 0;
+let lastRecordedDate = new Date().toDateString();
+
+// New logic for trying to close multiple tabs
+let anchorTabId = null;
+let openTwitterTabs = new Set();
+
+function trackTwitterTab(tabId) {
+    console.log(`Tracking Twitter tab: ${tabId}`);
+    if (anchorTabId === null) {
+        anchorTabId = tabId; // Set the first tab as the anchor
+    }
+    openTwitterTabs.add(tabId);
+}
+
+// Function to untrack a Twitter tab
+function untrackTwitterTab(tabId) {
+    console.log(`Untracking Twitter tab: ${tabId}`);
+    openTwitterTabs.delete(tabId);
+    if (tabId === anchorTabId) {
+        // The anchor tab is closed, close all other Twitter tabs
+        closeAllTwitterTabs();
+        anchorTabId = null; // Reset the anchor tab
+    }
+}
+
+// Function to close all tracked Twitter tabs
+function closeAllTwitterTabs() {
+    openTwitterTabs.forEach(tabId => {
+        if (tabId !== anchorTabId) { // Avoid closing the anchor tab again
+            chrome.tabs.remove(tabId);
+        }
+    });
+    openTwitterTabs.clear();
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.url) {
+        if (changeInfo.url.includes("twitter.com")) {
+            trackTwitterTab(tabId);
+        } else if (openTwitterTabs.has(tabId)) {
+            untrackTwitterTab(tabId);
+        }
+    }
+});
+
+
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    if (openTwitterTabs.has(tabId)) {
+        untrackTwitterTab(tabId);
+    }
+});
+
+// Back to the older code
+
+function updateTotalOpenTime(openDurationInSeconds) {
+    const today = new Date().toDateString();
+    if (lastRecordedDate !== today) {
+        totalOpenTimeTodayInSeconds = 0;
+        lastRecordedDate = today;
+    }
+    totalOpenTimeTodayInSeconds += openDurationInSeconds;
+    chrome.storage.local.set({ 'XVisitMinutes': totalOpenTimeTodayInSeconds });
+}
 
 
 function handleError(errorContext) {
@@ -48,7 +112,10 @@ function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "allowXAccess") {
         console.log(request.timeLimit);
-
+        
+        if (sender.tab) {
+            chrome.tabs.remove(sender.tab.id, handleError.bind(null, "closing intervention tab"));
+        }
         chrome.declarativeNetRequest.updateEnabledRulesets({
             disableRulesetIds: ["ruleset1"],
         }, () => {
@@ -77,7 +144,11 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         let openDurationInSeconds = (actualClosingTime - openingTime) / 1000;
 
         console.log(`Tab was open for ${openDurationInSeconds} seconds`);
+
+        updateTotalOpenTime(openDurationInSeconds);
         reEnableRules();
+
+        chrome.tabs.create({ url: 'debrief.html' });
 
         // Clean up
         delete tabClosingTimes[tabId];

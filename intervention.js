@@ -3,6 +3,10 @@ function updateCountDisplay() {
     chrome.storage.local.get('XVisitCount', function(data) {
         countSpan.textContent = data.XVisitCount || 0;
     });
+    chrome.storage.local.get('XVisitMinutes', function(data) {
+        let visitMinutes = data.XVisitMinutes || 0;
+        document.getElementById('minutes').textContent = visitMinutes;
+    });
 }
 
 function resetCountIfNewDay() {

@@ -4,12 +4,17 @@ let tabTimers = {};
 let totalOpenTimeTodayInSeconds = 0;
 let lastRecordedDate = new Date().toDateString();
 
+chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+    console.log('Redirection flag updated:');
+});
+
 // New logic for trying to close multiple tabs
 let anchorTabId = null;
 let openTwitterTabs = new Set();
 
 function trackTwitterTab(tabId) {
     console.log(`Tracking Twitter tab: ${tabId}`);
+
     if (anchorTabId === null) {
         anchorTabId = tabId; // Set the first tab as the anchor
     }
@@ -47,14 +52,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
 });
 
-
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (openTwitterTabs.has(tabId)) {
         untrackTwitterTab(tabId);
     }
 });
-
-// Back to the older code
 
 function updateTotalOpenTime(openDurationInSeconds) {
     const today = new Date().toDateString();
@@ -66,21 +68,12 @@ function updateTotalOpenTime(openDurationInSeconds) {
     chrome.storage.local.set({ 'XVisitMinutes': totalOpenTimeTodayInSeconds });
 }
 
-
 function handleError(errorContext) {
     if (chrome.runtime.lastError) {
         console.error(`Error: ${errorContext}: ${chrome.runtime.lastError.message}`);
     }
 }
 
-function reEnableRules() {
-    chrome.declarativeNetRequest.updateEnabledRulesets({
-        enableRulesetIds: ["ruleset1"],
-    }, () => {
-        handleError("re-enabling rules");
-        console.log("Rules re-enabled successfully");
-    });
-}
 
 function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
     let currentTime = Date.now();
@@ -112,19 +105,18 @@ function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "allowXAccess") {
         console.log(request.timeLimit);
-        
+      
+        chrome.storage.local.set({temporaryRedirectDisable: true}, () => {
+            console.log('Redirection flag updated to true');
+        });
+
         if (sender.tab) {
             chrome.tabs.remove(sender.tab.id, handleError.bind(null, "closing intervention tab"));
         }
-        chrome.declarativeNetRequest.updateEnabledRulesets({
-            disableRulesetIds: ["ruleset1"],
-        }, () => {
-            handleError("disabling rules");
 
-            chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
-                console.log(`Tab id is ${newTab.id}`);
-                scheduleTabClosure(newTab.id, request.timeLimit * 60);
-            });
+        chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
+            console.log(`Tab id is ${newTab.id}`);
+            scheduleTabClosure(newTab.id, request.timeLimit * 60);
         });
     } else if (request.action === "snooze" && sender.tab) {
         console.log(`In snooze with tab id of ${sender.tab.id}`);
@@ -146,7 +138,10 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         console.log(`Tab was open for ${openDurationInSeconds} seconds`);
 
         updateTotalOpenTime(openDurationInSeconds);
-        reEnableRules();
+
+        chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+            console.log('Redirection flag updated to false');
+        });
 
         chrome.tabs.create({ url: 'debrief.html' });
 

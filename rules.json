@@ -7,7 +7,7 @@
             "redirect": {"url": "chrome-extension://ipifmofnonjimpofbdankhjjajkbnnch/intervention.html"}
         },
         "condition": {
-            "regexFilter": "^(.*)twitter.com(.*)$",
+            "regexFilter": "(.*)twitter.com(.*)",
             "resourceTypes": ["main_frame"]
         }
     }

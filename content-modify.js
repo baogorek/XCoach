@@ -1,3 +1,13 @@
+const targetUrl = "chrome-extension://ipifmofnonjimpofbdankhjjajkbnnch/intervention.html";
+
+chrome.storage.local.get('temporaryRedirectDisable', function(data) {
+  if (!data.temporaryRedirectDisable) {
+    window.location.href = targetUrl; 
+  } else {
+    console.log("Redirection to intervention is currently disabled.");
+  }
+});
+
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "warnClose") {
         let warningBanner = document.createElement('div');

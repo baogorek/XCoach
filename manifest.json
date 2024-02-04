@@ -2,7 +2,10 @@
     "manifest_version": 3,
     "name": "XCoach",
     "version": "1.0",
-    "permissions": ["tabs", "declarativeNetRequest", "storage"],
+    "permissions": [
+      "tabs",
+      "storage"
+    ],
     "background": {
         "service_worker": "background.js"
     },
@@ -25,15 +28,6 @@
         "*://*.twitter.com/*",
         "*://*.x.com/*"
     ],
-    "declarative_net_request": {
-        "rule_resources": [
-            {
-                "id": "ruleset1",
-                "enabled": true,
-                "path": "rules.json"
-            }
-        ]
-    },
     "web_accessible_resources": [
         {
             "resources": ["intervention.html"],
@@ -43,7 +37,7 @@
     "content_scripts": [
         {
             "matches": ["*://twitter.com/*"],
-            "js": ["warn.js"]
+            "js": ["content-modify.js"]
         }
     ]
 }

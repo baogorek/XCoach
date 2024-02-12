@@ -3,38 +3,103 @@ function updateCountDisplay() {
     chrome.storage.local.get('XVisitCount', function(data) {
         countSpan.textContent = data.XVisitCount || 0;
     });
-    chrome.storage.local.get('XVisitMinutes', function(data) {
-        let visitMinutes = data.XVisitMinutes || 0;
-        document.getElementById('minutes').textContent = visitMinutes;
+    chrome.storage.local.get('XVisitSeconds', function(data) {
+        let visitSeconds = data.XVisitSeconds || 0;
+        document.getElementById('minutes').textContent = Math.round(visitSeconds / 60);
     });
 }
 
-function resetCountIfNewDay() {
-    const today = new Date().toDateString();
-    chrome.storage.local.get('lastVisitDate', function(data) {
-        if (data.lastVisitDate !== today) {
-            console.log("data.lastVisitDate !== today")
-            chrome.storage.local.set({ 'XVisitCount': 0, 'lastVisitDate': today });
-            updateCountDisplay();
+function deletePriority(index) {
+    chrome.storage.local.get('priorities', function(data) {
+        let priorities = data.priorities || [];
+        if (index >= 0 && index < priorities.length) {
+            priorities.splice(index, 1);
+            chrome.storage.local.set({'priorities': priorities}, function() {
+                loadAndDisplayPriorities();
+            });
         }
     });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    resetCountIfNewDay();
-    updateCountDisplay();
-
-    const button = document.getElementById('proceedToX');
-
-    button.addEventListener('click', function() {
-        chrome.storage.local.get('XVisitCount', function(data) {
-            let currentCount = data.XVisitCount || 0;
-            currentCount++;
-            chrome.storage.local.set({ 'XVisitCount': currentCount }, function() {
-                updateCountDisplay();
-                const timeLimit = parseInt(document.getElementById('timeLimit').value, 10) || 15
-                chrome.runtime.sendMessage({ action: "allowXAccess", timeLimit: timeLimit});
-            });
+function loadAndDisplayPriorities() {
+    chrome.storage.local.get('priorities', function(data) {
+        const priorities = data.priorities || [];
+        priorityList.innerHTML = ''; // Clear current list
+        priorities.forEach(function(priority, index) {
+            addPriorityToList(priority, index);
         });
     });
+}
+
+function addPriority(priority) {
+    chrome.storage.local.get('priorities', function(data) {
+        let priorities = data.priorities || [];
+        if (priorities.length < 5) {
+            priorities.push(priority);
+            chrome.storage.local.set({'priorities': priorities}, function() {
+                addPriorityToList(priority, priorities.length - 1);
+            });
+        } else {
+            alert('Maximum of 5 priorities reached.');
+        }
+    });
+}
+
+function addPriorityToList(priority, index) {
+    const li = document.createElement('li');
+    li.textContent = priority;
+    priorityList.appendChild(li);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.onclick = function() {
+        deletePriority(index);
+    };
+    li.appendChild(deleteBtn);
+    priorityList.appendChild(li);
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateCountDisplay();
+
+    const proceedToXButton = document.getElementById('proceedToX');
+    const timeLimitInput = document.getElementById('timeLimit'); 
+
+    proceedToXButton.addEventListener('click', function() {
+        let timeLimit = parseInt(document.getElementById('timeLimit').value, 10);
+        
+        if (!isNaN(timeLimit) && timeLimit >= 1) {
+            chrome.runtime.sendMessage({ action: "allowXAccess", timeLimit: timeLimit});
+        } else {
+            alert('Please enter a valid time limit of 1 minute or more in whole number increments.');
+        }
+    });
+
+    timeLimitInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const timeLimitValue = parseInt(timeLimitInput.value, 10);
+            proceedToXButton.click();
+        }
+    });
+
+    // Priorities
+    const priorityForm = document.getElementById('priorityForm');
+    const newPriorityInput = document.getElementById('newPriority');
+    const priorityList = document.getElementById('priorityList');
+
+
+    priorityForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const newPriority = newPriorityInput.value.trim();
+        if (newPriority) {
+            addPriority(newPriority);
+            newPriorityInput.value = '';
+        }
+    });
+
+  
+    loadAndDisplayPriorities();
+
 });

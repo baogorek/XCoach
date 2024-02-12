@@ -11,6 +11,7 @@ chrome.storage.local.get('temporaryRedirectDisable', function(data) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "warnClose") {
         let warningBanner = document.createElement('div');
+        warningBanner.id = 'warningBannerId';
 
         // Banner styling
         warningBanner.style.position = 'fixed';
@@ -39,11 +40,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         snoozeBtn.style.marginLeft = '15px';
         snoozeBtn.onclick = function() {
             chrome.runtime.sendMessage({ action: "snooze", tabId: request.tabId });
-            warningBanner.remove();
         };
         warningBanner.appendChild(snoozeBtn);
 
         document.body.appendChild(warningBanner);
 
-    }
+    } else if (request.action === "snooze") {
+        let warningBanner = document.getElementById('warningBannerId');
+        console.log('In content-modify.js, trying to remove the banner for a snooze');
+        console.log('Warning Banner is', warningBanner);
+        if (warningBanner) {
+            warningBanner.remove();
+        }
+    } 
 });
+
+

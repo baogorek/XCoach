@@ -3,9 +3,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let visitCount = data.XVisitCount || 0;
         document.getElementById('count').textContent = visitCount;
     });
-    chrome.storage.local.get('XVisitMinutes', function(data) {
-        let visitMinutes = data.XVisitMinutes || 0;
-        document.getElementById('minutes').textContent = visitMinutes;
+    chrome.storage.local.get('XVisitSeconds', function(data) {
+        let visitSeconds = data.XVisitSeconds || 0;
+        document.getElementById('minutes').textContent = Math.round(visitSeconds / 60);
     });
 });
 

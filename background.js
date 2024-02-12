@@ -1,16 +1,26 @@
 let tabClosingTimes = {};
 let tabOriginalTimeLimits = {};
 let tabTimers = {};
-let totalOpenTimeTodayInSeconds = 0;
-let lastRecordedDate = new Date().toDateString();
-
-chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
-    console.log('Redirection flag updated:');
-});
-
-// New logic for trying to close multiple tabs
 let anchorTabId = null;
 let openTwitterTabs = new Set();
+let lastRecordedDate = new Date().toDateString();
+
+
+function resetCountsIfNewDay() {
+    const today = new Date().toDateString();
+    chrome.storage.local.get('lastVisitDate', function(data) {
+        if (data.lastVisitDate !== today) {
+            console.log("data.lastVisitDate !== today")
+            chrome.storage.local.set(
+            {
+                'XVisitCount': 0,
+                'XVisitSeconds': 0,
+                'lastVisitDate': today
+            });
+            updateCountDisplay();
+        }
+    });
+}
 
 function trackTwitterTab(tabId) {
     console.log(`Tracking Twitter tab: ${tabId}`);
@@ -21,7 +31,6 @@ function trackTwitterTab(tabId) {
     openTwitterTabs.add(tabId);
 }
 
-// Function to untrack a Twitter tab
 function untrackTwitterTab(tabId) {
     console.log(`Untracking Twitter tab: ${tabId}`);
     openTwitterTabs.delete(tabId);
@@ -32,7 +41,6 @@ function untrackTwitterTab(tabId) {
     }
 }
 
-// Function to close all tracked Twitter tabs
 function closeAllTwitterTabs() {
     openTwitterTabs.forEach(tabId => {
         if (tabId !== anchorTabId) { // Avoid closing the anchor tab again
@@ -42,30 +50,14 @@ function closeAllTwitterTabs() {
     openTwitterTabs.clear();
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url) {
-        if (changeInfo.url.includes("twitter.com")) {
-            trackTwitterTab(tabId);
-        } else if (openTwitterTabs.has(tabId)) {
-            untrackTwitterTab(tabId);
-        }
-    }
-});
-
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    if (openTwitterTabs.has(tabId)) {
-        untrackTwitterTab(tabId);
-    }
-});
-
-function updateTotalOpenTime(openDurationInSeconds) {
-    const today = new Date().toDateString();
-    if (lastRecordedDate !== today) {
-        totalOpenTimeTodayInSeconds = 0;
-        lastRecordedDate = today;
-    }
-    totalOpenTimeTodayInSeconds += openDurationInSeconds;
-    chrome.storage.local.set({ 'XVisitMinutes': totalOpenTimeTodayInSeconds });
+function updateTotalOpenTime(sessionDurationInSeconds) {
+    chrome.storage.local.get('XVisitSeconds', function(data) {
+        let dailyVisitTime = data.XVisitSeconds || 0;
+        dailyVisitTime += sessionDurationInSeconds; 
+        chrome.storage.local.set({ 'XVisitSeconds': dailyVisitTime}, function() {
+            console.log('Total open time today updated:', dailyVisitTime);
+        });
+    });
 }
 
 function handleError(errorContext) {
@@ -74,6 +66,12 @@ function handleError(errorContext) {
     }
 }
 
+
+function warnAllTwitterTabs(action) {
+    openTwitterTabs.forEach(tabId => {
+        chrome.tabs.sendMessage(tabId, { action: action, tabId: tabId });
+    });
+}
 
 function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
     let currentTime = Date.now();
@@ -94,7 +92,7 @@ function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
    
     tabTimers[tabId] = {
         warnTimer: setTimeout(() => {
-            chrome.tabs.sendMessage(tabId, { action: "warnClose", tabId: tabId});
+            warnAllTwitterTabs("warnClose");
         }, timeLimitInSeconds * 1000 - 15 * 1000),
         closeTimer: setTimeout(() => {
             chrome.tabs.remove(tabId);
@@ -102,12 +100,48 @@ function scheduleTabClosure(tabId, timeLimitInSeconds, isSnooze = false) {
     };
 }
 
+function incrementVisitCount() {
+    chrome.storage.local.get('XVisitCount', function(data) {
+        let currentCount = data.XVisitCount || 0;
+        currentCount++;
+        chrome.storage.local.set({ 'XVisitCount': currentCount }, function() {
+            console.log('Visit count incremented to', currentCount);
+        });
+    });
+}
+
+// Run code and set up listeners -----------------------------------------
+
+resetCountsIfNewDay();
+
+chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+    console.log('Redirect disable flag set to false');
+});
+
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.url) {
+        if (changeInfo.url.includes("twitter.com")) {
+            trackTwitterTab(tabId);
+        } else if (openTwitterTabs.has(tabId)) {
+            untrackTwitterTab(tabId);
+        }
+    }
+});
+
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    if (openTwitterTabs.has(tabId)) {
+        untrackTwitterTab(tabId);
+    }
+});
+
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.action === "allowXAccess") {
-        console.log(request.timeLimit);
+        console.log('Requested time limit: ', request.timeLimit);
+        incrementVisitCount();
       
         chrome.storage.local.set({temporaryRedirectDisable: true}, () => {
-            console.log('Redirection flag updated to true');
+            console.log('Redirection disable flag updated to true');
         });
 
         if (sender.tab) {
@@ -120,8 +154,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         });
     } else if (request.action === "snooze" && sender.tab) {
         console.log(`In snooze with tab id of ${sender.tab.id}`);
+        console.log(`Will snooze using the anchor tab id is ${anchorTabId}`);
         let additionalTime = 60;
-        scheduleTabClosure(sender.tab.id, additionalTime, true);
+        scheduleTabClosure(anchorTabId, additionalTime, true);
+        warnAllTwitterTabs("snooze");
     }
 });
 
@@ -140,7 +176,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         updateTotalOpenTime(openDurationInSeconds);
 
         chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
-            console.log('Redirection flag updated to false');
+            console.log('Redirect disable flag updated to false');
         });
 
         chrome.tabs.create({ url: 'debrief.html' });

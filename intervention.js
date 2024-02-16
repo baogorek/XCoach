@@ -28,6 +28,13 @@ function loadAndDisplayPriorities() {
         priorities.forEach(function(priority, index) {
             addPriorityToList(priority, index);
         });
+
+        const priorityForm = document.getElementById('priorityForm');
+        if (priorities.length >= 5) {
+            priorityForm.style.display = 'none';
+        } else {
+            priorityForm.style.display = '';
+        }
     });
 }
 
@@ -38,6 +45,7 @@ function addPriority(priority) {
             priorities.push(priority);
             chrome.storage.local.set({'priorities': priorities}, function() {
                 addPriorityToList(priority, priorities.length - 1);
+                loadAndDisplayPriorities();
             });
         } else {
             alert('Maximum of 5 priorities reached.');

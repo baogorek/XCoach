@@ -187,6 +187,24 @@ function incrementVisitCount() {
     });
 }
 
+function setLastVisitDateToLocal() {
+    let now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth() + 1; // getMonth() is zero-indexed, so add 1
+    let day = now.getDate();
+
+    // Ensure month and day are in 2-digit format
+    month = ('0' + month).slice(-2);
+    day = ('0' + day).slice(-2);
+
+    let today = `${year}-${month}-${day}`;
+
+    chrome.storage.local.set({ 'lastVisitDate': today }, function() {
+        console.log(`lastVisitDate updated to ${today}, reflecting local time zone.`);
+    });
+}
+
+
 // Run startup code ------------------------------------------------
 
 // resetCountsIfNewDay();
@@ -229,11 +247,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         console.log('Requested time limit: ', request.timeLimit);
 
         incrementVisitCount();
-
-        let today = new Date().toISOString().split('T')[0];
-        chrome.storage.local.set({ 'lastVisitDate': today }, function() {
-          console.log(`lastVisitDate updated to ${today} upon user decision to access Twitter.`);
-        });
+        setLastVisitDateToLocal();
       
         chrome.storage.local.set({temporaryRedirectDisable: true}, () => {
             console.log('Redirection disable flag updated to true');
@@ -273,8 +287,6 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
             console.log('Redirect disable flag updated to false');
         });
-
-        chrome.tabs.create({ url: 'debrief.html' });
 
         // Clean up
         delete tabClosingTimes[tabId];

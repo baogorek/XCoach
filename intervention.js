@@ -111,3 +111,95 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAndDisplayPriorities();
 
 });
+
+// Charting ---------
+// Assuming you have two canvas elements with these IDs in your HTML
+var ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
+var ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
+
+chrome.storage.local.get('dailyData', function(data) {
+
+    if (!data.dailyData || data.dailyData.length === 0) {
+        console.log("No daily data available yet.");
+        document.getElementById("visitCountVizContainer").textContent = (
+           "No data available yet. Start using X/Twitter and data will appear here."
+        );
+        return;
+    }
+
+    var dates = data.dailyData.map(entry => entry.date);
+    var visitCounts = data.dailyData.map(entry => entry.XVisitCount);
+    var visitMinutes = data.dailyData.map(entry => entry.XVisitSeconds / 60);
+
+    // Find max values for scaling
+    var maxVisitCount = Math.max(...visitCounts) * 1.1;
+    var maxVisitMinutes = Math.max(...visitMinutes) * 1.1;
+
+    // Calculate means
+    var meanVisitCount = visitCounts.reduce((a, b) => a + b, 0) / visitCounts.length;
+    var meanVisitMinutes = visitMinutes.reduce((a, b) => a + b, 0) / visitMinutes.length;
+
+    // Create arrays of mean values for all labels
+    var meanVisitCountArray = Array(dates.length).fill(meanVisitCount);
+    var meanVisitMinutesArray = Array(dates.length).fill(meanVisitMinutes);
+
+    // Create the Daily Visit Count Chart
+    var visitCountChart = new Chart(ctxVisitCount, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Daily Visit Count',
+                data: visitCounts,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }, {
+                label: 'Mean Visit Count',
+                data: meanVisitCountArray,
+                borderColor: 'rgb(255, 159, 64)',
+                borderDash: [5, 5], // Dotted line
+                tension: 0.1
+            }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: maxVisitCount
+                }
+            }
+        }
+    });
+
+    // Create the Daily Visit Minutes Chart
+    var visitMinutesChart = new Chart(ctxVisitMinutes, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Daily Visit Minutes',
+                data: visitMinutes,
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            },
+            {
+                label: 'Mean Visit Minutes',
+                data: meanVisitMinutesArray,
+                borderColor: 'rgb(255, 159, 64)',
+                borderDash: [5, 5], // Dotted line
+                tension: 0.1
+            }
+        ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: maxVisitMinutes
+                }
+            }
+        }
+
+    });
+});

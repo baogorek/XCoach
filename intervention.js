@@ -121,7 +121,7 @@ chrome.storage.local.get('dailyData', function(data) {
 
     if (!data.dailyData || data.dailyData.length === 0) {
         console.log("No daily data available yet.");
-        document.getElementById("visitCountVizContainer").textContent = (
+        document.getElementById("noContentDiv").textContent = (
            "No data available yet. Start using X/Twitter and data will appear here."
         );
         return;

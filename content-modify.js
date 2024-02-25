@@ -45,7 +45,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         document.body.appendChild(warningBanner);
 
-    } else if (request.action === "snooze") {
+    } else if (request.action === "removeWarning") {
         let warningBanner = document.getElementById('warningBannerId');
         console.log('In content-modify.js, trying to remove the banner for a snooze');
         console.log('Warning Banner is', warningBanner);

@@ -1,10 +1,8 @@
 // Initialize Global Background variables
-let anchorTabId;
+//
+// TODO: get these out of open code
 let interventionTabId;
-let anchorTabOpenTime;
-let warnTimer;
-let closeTimer;
-let openTwitterTabs = new Set();
+let twitterOpenTimestamp;
 
 // Utility functions for the developer --------------------------------
 
@@ -25,11 +23,23 @@ function showData() {
     });
 }
 
-function showAlarm() {
+function showAlarms() {
     chrome.alarms.get("compileDailyData", function(alarm) {
         console.log(alarm);
         let alarmDate = new Date(alarm.scheduledTime);
-        console.log(`Scheduled to go off at ${alarmDate}`);
+        console.log(`compileDailyData to go off at ${alarmDate}`);
+    });
+
+    chrome.alarms.get("closeTimer", function(alarm) {
+        console.log(alarm);
+        let alarmDate = new Date(alarm.scheduledTime);
+        console.log(`Close Alarm Scheduled to go off at ${alarmDate}`);
+    });
+
+    chrome.alarms.get("warnTimer", function(alarm) {
+        console.log(alarm);
+        let alarmDate = new Date(alarm.scheduledTime);
+        console.log(`Warn Alarm Scheduled to go off at ${alarmDate}`);
     });
 }
 
@@ -109,33 +119,49 @@ function updateTotalOpenTime(sessionDurationInSeconds) {
 }
 
 // Tracking functions ---------------------------------------------------
+function atLeastOneTwitterTab() {
+    // Needs to be called in a getOpenTwitterTabs promise
+    return openTwitterTabs.size > 0;
+}
+
 function trackTwitterTab(tabId) {
-    if (anchorTabId) {  // TODO: could replace with length opentwittertabs > 0
+    // Needs to be called in a getOpenTwitterTabs promise
+    if (atLeastOneTwitterTab()) {
         console.log(`Tracking Twitter tab: ${tabId}`);
         openTwitterTabs.add(tabId);
+        setOpenTwitterTabs(openTwitterTabs);
     }
 }
 
-// Note: untrack is used in 2 listeners: onUpdated and onRemoved.
-function untrackTwitterTab(tabId) {
-    if (tabId === anchorTabId) {  // TODO: is this really necessary?
-        console.log(`Anchor tab: ${tabId} closed. Closing all twitter tabs.`);
+function untrackTwitterTabFromTabEvent(tabId) {
+    // Needs to be called in a getOpenTwitterTabs promise
+    // This function is called in both tab listeners
+    openTwitterTabs.delete(tabId);
+    setOpenTwitterTabs(openTwitterTabs);
+    if (openTwitterTabs.size === 0) {
+        console.log(`Last Twitter tab ${tabId} closed. Going to exit logic.`);
         closeAllTwitterTabs();
     } else {
-       // this is the user closing a secondary twitter tab
-       console.log(`Untracking non-anchor Twitter tab: ${tabId} as it has been closed`);
-       openTwitterTabs.delete(tabId);
+       console.log(`Untracking a Twitter tab: ${tabId}`);
+       console.log(openTwitterTabs);
     }
 }
 
 function closeAllTwitterTabs() {
-    openTwitterTabs.forEach(tabId => {
+    // Can get triggered by timer or by untrack being called with 1 twitter tab open
+    console.log("Close all twitter tabs");
+    let twitterTabsToClose = openTwitterTabs;
+    setOpenTwitterTabs(new Set());
+
+    twitterTabsToClose.forEach(tabId => {
         chrome.tabs.remove(tabId);
     });
+  
+    wipeTimers();
 
-    let anchorTabLifetime = (Date.now() - anchorTabOpenTime) / 1000;
-    console.log(`Anchor tab was alive for ${anchorTabLifetime}`);
-    updateTotalOpenTime(anchorTabLifetime);
+    let sessionLifetime = (Date.now() - twitterOpenTimestamp) / 1000;
+    console.log(`session was alive for ${sessionLifetime}`);
+    updateTotalOpenTime(sessionLifetime);
     
     //  Reinstantiate the intervention mechanism
     chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
@@ -148,15 +174,12 @@ function closeAllTwitterTabs() {
     }
 
     // Reinitialize global background variables 
-    anchorTabId = null;
-    anchorTabOpenTime = null;
-    warnTimer = null;
-    closeTimer = null;
-    openTwitterTabs = new Set();
+    twitterOpenTimestamp = null;  // TODO
 }
 
 // Messages for content-modify.js (acting on Twitter) ---------------------------
 function warnAllTwitterTabs() {
+    // needs to be called in a getOpenTwitterTabs promise
     console.log("Warn all twitter tabs");
     openTwitterTabs.forEach(tabId => {
         chrome.tabs.sendMessage(tabId, { action: "warnClose", tabId: tabId });
@@ -164,25 +187,27 @@ function warnAllTwitterTabs() {
 }
 
 function removeWarningAllTwitterTabs() {
+    // needs to be called in a getOpenTwitterTabs promise
     console.log("Remove warnings from twitter tabs");
     openTwitterTabs.forEach(tabId => {
         chrome.tabs.sendMessage(tabId, { action: "removeWarning", tabId: tabId });
     });
 }
 
-
 function wipeTimers() {
-    if (warnTimer) clearTimeout(warnTimer);
-    if (closeTimer) clearTimeout(closeTimer);
-    warnTimer = null;
-    closeTimer = null;
+    chrome.alarms.clear("warnTimer", () => {
+        console.log("Warning alarm cleared.");
+    });
+    chrome.alarms.clear("closeTimer", () => {
+        console.log("Closure alarm cleared.");
+    });
 }
 
-function scheduleTabClosure(timeLimitInSeconds) {
-    console.log(`scheduling anchor tab closure for ${timeLimitInSeconds} seconds from now`);
-    wipeTimers();
-    warnTimer = setTimeout(warnAllTwitterTabs, timeLimitInSeconds * 1000 - (15 * 1000));
-    closeTimer = setTimeout(closeAllTwitterTabs, timeLimitInSeconds * 1000);
+function scheduleTabClosure(timeLimitInMinutes) {
+    // Should never be called with timeLimitInMinutes < 2, but UI prevents this
+    console.log(`scheduling session end ${timeLimitInMinutes} minutes from now`);
+    chrome.alarms.create("warnTimer", {"delayInMinutes": timeLimitInMinutes - 1});
+    chrome.alarms.create("closeTimer", {"delayInMinutes": timeLimitInMinutes});
 }
 
 function incrementVisitCount() {
@@ -202,8 +227,8 @@ function setLastVisitDateToLocal() {
     let day = now.getDate();
 
     // Ensure month and day are in 2-digit format
-    month = ('0' + month).slice(-2);
-    day = ('0' + day).slice(-2);
+  month = ('0' + month).slice(-2);
+  day = ('0' + day).slice(-2);
 
     let today = `${year}-${month}-${day}`;
 
@@ -212,21 +237,60 @@ function setLastVisitDateToLocal() {
     });
 }
 
+// Get and Set "local" variables from Chrome local storage
+
+function setOpenTwitterTabs(openTwitterTabs) {
+    const openTabsArray = Array.from(openTwitterTabs);
+    chrome.storage.local.set({ openTwitterTabs: openTabsArray }, function() {
+        console.log('Open Twitter tabs saved');
+    });
+}
+function getOpenTwitterTabs() {
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.get({openTwitterTabs: []}, (result) => {
+            openTwitterTabs = new Set(result.openTwitterTabs);
+            console.log("Getting openTwitterTabs from Chrome local storage:", openTwitterTabs);
+            resolve();
+        });
+    });
+}
+
 // Set up listeners -------------------------------------------------
 
 // Chrome alarms listeners
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "compileDailyData") {
-    console.log("Alarm: compileDailyData triggered");
-    compileAndStoreDailyData();
-  }
+    if (alarm.name === "compileDailyData") {
+        console.log("Alarm: compileDailyData triggered");
+        compileAndStoreDailyData();
+    }
+
+    if (alarm.name === "warnTimer") {
+        console.log("Alarm: warnTimer triggered");
+        warnAllTwitterTabs();
+    }
+
+    if (alarm.name === "closeTimer") {
+        console.log("Alarm: closeTimer triggered");
+        closeAllTwitterTabs();
+    }
+
 });
 
 // Chrome runtime listeners
-chrome.runtime.onInstalled.addListener(scheduleDailyDataCompilation);
-chrome.runtime.onStartup.addListener(scheduleDailyDataCompilation);
+// chrome.runtime.onInstalled.addListener();
+chrome.runtime.onStartup.addListener(() => {
+    console.log("XCoach: Starting Chrome");
+    chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+        console.log('Redirect disable flag set to false');
+    });
+    scheduleDailyDataCompilation();
+    setOpenTwitterTabs(new Set());
+    wipeTimers();
+}); 
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+const handleOnMessageBackground = (request, sender, sendResponse) => { 
+    console.log("Handling OnMessage event in background.js");
+
     if (request.action === "allowXAccess") {
         console.log('Requested time limit: ', request.timeLimit);
 
@@ -241,55 +305,66 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         console.log(`I believe this is the intervention tab id: ${interventionTabId}`);
 
-        // creating the anchor tab
+        // creating the first official Twitter tab 
         chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
-            console.log(`Tab id is ${newTab.id}`);
-            anchorTabId = newTab.id;  // ToDo: do you really need an anchor tab?
-            openTwitterTabs.add(anchorTabId);
-            anchorTabOpenTime = Date.now();
-            console.log(`Anchor Twitter tab Id set to: ${anchorTabId}, opened at ${anchorTabOpenTime}`);
-            scheduleTabClosure(request.timeLimit * 60);
+            console.log("In chrome.tabs.create after creating the first twitter tab of the session");
+
+            getOpenTwitterTabs().then(() => {
+                openTwitterTabs.add(newTab.id);
+                setOpenTwitterTabs(openTwitterTabs);
+                twitterOpenTimestamp = Date.now();
+                scheduleTabClosure(request.timeLimit);
+            });
         });
 
-    } else if (request.action === "snooze" && anchorTabId) {
-        console.log(`Will snooze using the anchor tab id is ${anchorTabId}`);
-        scheduleTabClosure(60);  // additional 60 seconds feels right
+    } else if (request.action === "snooze") {
+        getOpenTwitterTabs().then(() => {
+            if (atLeastOneTwitterTab()) {
+                console.log("Snooze 2 minutes requested");
+                removeWarningAllTwitterTabs();
+                scheduleTabClosure(2);
+            }
+        });
     }
-});
+};
 
 // Chrome tabs listeners: has to work for ANY chrome tab at any time -----
 
-// Tab ON UPDATED
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (anchorTabId && changeInfo.url) {
-        console.log(`Tab ${tabId} changed. onUpdated listener alerted`);
-        console.log(changeInfo.url);
-        if (changeInfo.url.includes("twitter.com")) {
-            console.log("Found a URL with Twitter in it. About to track");
-            trackTwitterTab(tabId);
-            console.log("done running trackTwitterTab. openTwitterTabs is");
-            console.log(openTwitterTabs);
-        } else if (openTwitterTabs.has(tabId)) {  // tab that was on twitter navigated away.
-            console.log(`Twitter tab left twitter. I untracking tab id ${tabId}`);
-            untrackTwitterTab(tabId);
-        }
-    }
-});
+const handleTabsOnUpdated = (tabId, changeInfo, tab) => {
+    console.log("Handling Tabs OnUpdated event in background.js");
+    if (changeInfo.url) {  // Don't pull data from local storage unless you have to
+        getOpenTwitterTabs().then(() => {
+            if (atLeastOneTwitterTab()) {
+                console.log(`Tab ${tabId} changed. onUpdated listener alerted`);
+                console.log(changeInfo.url);
+                if (changeInfo.url.includes("twitter.com")) {
+                    console.log("Change listener found a URL with Twitter in it. Tracking.");
+                    trackTwitterTab(tabId);
+                    console.log(openTwitterTabs);
+                } else if (openTwitterTabs.has(tabId)) {  // tab that was on twitter navigated away.
+                    console.log(`Twitter tab left twitter. I untracking tab id ${tabId}`);
+                    untrackTwitterTabFromTabEvent(tabId, "navigated away");
+                }
+            }
+        });
+    };
+};
 
-// Tab ON REMOVED
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    if (anchorTabId) {
-        if (openTwitterTabs.has(tabId) && tabId !== anchorTabId) {
-            untrackTwitterTab(tabId);
+const handleTabsOnRemoved = (tabId, removeInfo) => {
+    console.log("Handling Tabs OnRemoved event in background.js");
+    getOpenTwitterTabs().then(() => {
+        if (atLeastOneTwitterTab()) {
+            if (openTwitterTabs.has(tabId)) {
+                untrackTwitterTabFromTabEvent(tabId, "tab removed");
+            }
         }
-    }
-    if (tabId === interventionTabId) {  // User closes intervention tab
-        interventionTabId = null; 
-    }
-});
+        if (tabId === interventionTabId) {  // TODO
+            interventionTabId = null; 
+        }
+    });
+};
 
 // Run code that runs regardless ------------------------------------------------
-
-chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
-    console.log('Redirect disable flag set to false');
-});
+chrome.runtime.onMessage.addListener(handleOnMessageBackground);
+chrome.tabs.onUpdated.addListener(handleTabsOnUpdated);
+chrome.tabs.onRemoved.addListener(handleTabsOnRemoved);

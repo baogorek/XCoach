@@ -5,7 +5,7 @@ function updateCountDisplay() {
     });
     chrome.storage.local.get('XVisitSeconds', function(data) {
         let visitSeconds = data.XVisitSeconds || 0;
-        document.getElementById('minutes').textContent = Math.round(visitSeconds / 60);
+        document.getElementById('minutes').textContent = (visitSeconds / 60).toFixed(1);
     });
 }
 
@@ -77,10 +77,10 @@ document.addEventListener('DOMContentLoaded', function() {
     proceedToXButton.addEventListener('click', function() {
         let timeLimit = parseInt(document.getElementById('timeLimit').value, 10);
         
-        if (!isNaN(timeLimit) && timeLimit >= 1) {
+        if (!isNaN(timeLimit) && timeLimit >= 2) {
             chrome.runtime.sendMessage({ action: "allowXAccess", timeLimit: timeLimit});
         } else {
-            alert('Please enter a valid time limit of 1 minute or more in whole number increments.');
+            alert('Please enter a valid time limit of 2 minutes or more in whole number increments.');
         }
     });
 
@@ -106,10 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
             newPriorityInput.value = '';
         }
     });
-
   
     loadAndDisplayPriorities();
-
 });
 
 // Charting ---------

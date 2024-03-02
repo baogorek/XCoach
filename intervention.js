@@ -1,3 +1,5 @@
+console.log = function() {};
+
 function updateCountDisplay() {
     const countSpan = document.getElementById('count');
     chrome.storage.local.get('XVisitCount', function(data) {

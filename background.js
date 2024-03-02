@@ -1,10 +1,6 @@
-// Initialize Global Background variables
-//
-// TODO: get these out of open code
-let interventionTabId;
-let twitterOpenTimestamp;
-
 // Utility functions for the developer --------------------------------
+
+// console.log = function() {};
 
 function clearAllChromeLocalData() {
     chrome.storage.local.clear(function() {
@@ -25,21 +21,24 @@ function showData() {
 
 function showAlarms() {
     chrome.alarms.get("compileDailyData", function(alarm) {
-        console.log(alarm);
-        let alarmDate = new Date(alarm.scheduledTime);
-        console.log(`compileDailyData to go off at ${alarmDate}`);
+        if (alarm) {
+            let alarmDate = new Date(alarm.scheduledTime);
+            console.log(`compileDailyData to go off at ${alarmDate}`);
+        };
     });
 
     chrome.alarms.get("closeTimer", function(alarm) {
-        console.log(alarm);
-        let alarmDate = new Date(alarm.scheduledTime);
-        console.log(`Close Alarm Scheduled to go off at ${alarmDate}`);
+        if (alarm) {
+            let alarmDate = new Date(alarm.scheduledTime);
+            console.log(`Close Alarm Scheduled to go off at ${alarmDate}`);
+        };
     });
 
     chrome.alarms.get("warnTimer", function(alarm) {
-        console.log(alarm);
-        let alarmDate = new Date(alarm.scheduledTime);
-        console.log(`Warn Alarm Scheduled to go off at ${alarmDate}`);
+        if (alarm) {
+            let alarmDate = new Date(alarm.scheduledTime);
+            console.log(`Warn Alarm Scheduled to go off at ${alarmDate}`);
+        };
     });
 }
 
@@ -109,12 +108,20 @@ function compileAndStoreDailyData() {
 }
 
 function updateTotalOpenTime(sessionDurationInSeconds) {
-    chrome.storage.local.get('XVisitSeconds', function(data) {
-        let dailyVisitTime = data.XVisitSeconds || 0;
-        dailyVisitTime += sessionDurationInSeconds; 
-        chrome.storage.local.set({ 'XVisitSeconds': dailyVisitTime}, function() {
-            console.log('Total open time today updated:', dailyVisitTime);
-        });
+    chrome.storage.local.get(['XVisitSeconds', 'twitterOpenTimestamp'], function(data) {
+        if (data.twitterOpenTimestamp) {
+            let dailyVisitTime = data.XVisitSeconds || 0;
+            let sessionDurationInSeconds = (Date.now() - data.twitterOpenTimestamp) / 1000;
+
+            dailyVisitTime += sessionDurationInSeconds; 
+
+            chrome.storage.local.set({ 'XVisitSeconds': dailyVisitTime}, function() {
+                console.log('Total open time today updated to:', dailyVisitTime, 'seconds');
+                chrome.storage.local.set({ 'twitterOpenTimestamp': null }, function() {
+                    console.log('Twitter Open Timestamp reset.');
+                });
+            });
+        }
     });
 }
 
@@ -147,6 +154,20 @@ function untrackTwitterTabFromTabEvent(tabId) {
     }
 }
 
+function reloadTabIfOpen(tabId) {
+    if (tabId) {
+        chrome.tabs.get(tabId, (tab) => {
+            if (!chrome.runtime.lastError && tab) {
+                chrome.tabs.reload(tabId, () => {
+                    console.log("Tab reloaded successfully.");
+                });
+            } else {
+                console.log("Tried to close nonexistant tab.");
+            }
+        })
+    }
+}
+
 function closeAllTwitterTabs() {
     // Can get triggered by timer or by untrack being called with 1 twitter tab open
     console.log("Close all twitter tabs");
@@ -159,22 +180,16 @@ function closeAllTwitterTabs() {
   
     wipeTimers();
 
-    let sessionLifetime = (Date.now() - twitterOpenTimestamp) / 1000;
-    console.log(`session was alive for ${sessionLifetime}`);
-    updateTotalOpenTime(sessionLifetime);
+    updateTotalOpenTime();
     
     //  Reinstantiate the intervention mechanism
     chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
         console.log('Redirect disable flag updated to false');
     });
 
-    // Reload the intervention tab to work as a debrief tab, if it's still open
-    if (interventionTabId) {
-        chrome.tabs.reload(interventionTabId);
-    }
-
-    // Reinitialize global background variables 
-    twitterOpenTimestamp = null;  // TODO
+    chrome.storage.local.get('interventionTabId', (result) => {
+        reloadTabIfOpen(result.interventionTabId);
+    }); 
 }
 
 // Messages for content-modify.js (acting on Twitter) ---------------------------
@@ -255,6 +270,19 @@ function getOpenTwitterTabs() {
     });
 }
 
+function setInterventionTabId(tabId) {
+    chrome.storage.local.set({ interventionTabId: tabId }, function() {
+        console.log(`Intervention Tab ID saved: ${tabId}`);
+    });
+}
+
+function setTwitterOpenTimestamp(timestamp) {
+    chrome.storage.local.set({ twitterOpenTimestamp: timestamp }, function() {
+        console.log(`Twitter Open Timestamp saved: ${timestamp}`);
+    });
+}
+
+
 // Set up listeners -------------------------------------------------
 
 // Chrome alarms listeners
@@ -277,11 +305,29 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // Chrome runtime listeners
-// chrome.runtime.onInstalled.addListener();
+
+chrome.runtime.onInstalled.addListener((details) => {
+    // Just a stub for now
+    console.log(`XCoach onInstalledListener activated. Details:`);
+    console.log(details);
+    if (details.reason === "install") {
+        console.log("Performing initial setup...");
+    } else if (details.reason === "update") {
+        console.log("Updating to new version...");
+    }
+});
+
 chrome.runtime.onStartup.addListener(() => {
+
     console.log("XCoach: Starting Chrome");
-    chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+    chrome.storage.local.set({ temporaryRedirectDisable: false }, () => {
         console.log('Redirect disable flag set to false');
+    });
+    chrome.storage.local.set({ 'twitterOpenTimestamp': null }, function() {
+        console.log('Twitter Open Timestamp reset.');
+    });
+    chrome.storage.local.set({ 'interventionTabId': null }, function() {
+        console.log('Twitter Open Timestamp reset.');
     });
     scheduleDailyDataCompilation();
     setOpenTwitterTabs(new Set());
@@ -301,9 +347,8 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
             console.log('Redirection disable flag updated to true');
         });
 
-        interventionTabId = sender.tab.id;
-
-        console.log(`I believe this is the intervention tab id: ${interventionTabId}`);
+        setInterventionTabId(sender.tab.id);
+        setTwitterOpenTimestamp(Date.now());
 
         // creating the first official Twitter tab 
         chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
@@ -312,7 +357,6 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
             getOpenTwitterTabs().then(() => {
                 openTwitterTabs.add(newTab.id);
                 setOpenTwitterTabs(openTwitterTabs);
-                twitterOpenTimestamp = Date.now();
                 scheduleTabClosure(request.timeLimit);
             });
         });
@@ -357,9 +401,6 @@ const handleTabsOnRemoved = (tabId, removeInfo) => {
             if (openTwitterTabs.has(tabId)) {
                 untrackTwitterTabFromTabEvent(tabId, "tab removed");
             }
-        }
-        if (tabId === interventionTabId) {  // TODO
-            interventionTabId = null; 
         }
     });
 };

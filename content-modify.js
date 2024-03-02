@@ -1,3 +1,4 @@
+console.log = function() {};
 
 handleOnMessageContent = (request, sender, sendResponse) => {
     if (request.action === "warnClose") { // As in, warn that it's about to close

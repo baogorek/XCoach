@@ -1,34 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Intervention Page</title>
+    <title>XCoach Intervention Page</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
 
-    <h1>Welcome to your XCoach session!</h1>
+    <div id="fourSquares">
 
-    <h1>Your Priorities</h1>
-    <ul id="priorityList">
-        <!-- Priority items will be added here dynamically -->
-    </ul>
+        <div id="decisionDiv">
+            <h1>Your Priorities</h1>
+            <ul id="priorityList">
+                <!-- Priority items will be added here dynamically -->
+            </ul>
+            <form id="priorityForm">
+                <input type="text" id="newPriority" placeholder="Add a new priority" />
+                <button type="submit">Add Priority</button>
+            </form>
 
-    <form id="priorityForm">
-        <input type="text" id="newPriority" placeholder="Add a new priority" />
-        <button type="submit">Add Priority</button>
-    </form>
+            <h1>Today so far</h1>
+            <div id="statsToday">
+              <div id="XCount">You've visited X / Twitter <span id="count">0</span> <b>times</b></div>
+              <div id="XMinutes">You've spent <span id="minutes">0</span> <b>minutes</b> on X / Twitter</div>
+            </div>
 
-    <p>Do you really want to go to X?</p>
-    <input type="number" id="timeLimit" placeholder="Tab Lifetime in minutes" min="5">
-    <button id="proceedToX">Proceed to X.com</button>
-    <div id="XCount">Times you visited Twitter today: <span id="count">0</span></div>
-    <div id="XMinutes">Total minutes tab was open: <span id="minutes">0</span></div>
+            <h1>Proceed to X / Twitter</h1> 
+            <div id="decision">
+                <input type="number" id="timeLimit" placeholder="Session Lifetime Minutes" min="2">
+                <button id="proceedToX">Start Session</button>
+            </div>
+        </div>
 
-    <div id="noContentDiv"></div>
-    <div id="visitCountVizContainer">
-        <canvas id="visitCountChart"></canvas>
+        <div id="logoDiv">
+            <img src="images/icon1024.png" alt="XCoach Logo">
+            <h1>The XCoach is glad you're here!</h1>
+        </div>
+
+        <div id="visitCountGraphicsDiv">
+            <canvas id="visitCountChart"></canvas>
+        </div>
+
+        <div id="visitMinutesGraphicsDiv">
+            <canvas id="visitMinutesChart"></canvas>
+        </div>
     </div>
-    <div>
-        <canvas id="visitMinutesChart"></canvas>
+
+    <div id="pageFooter">
+      <a href="link-to-medium-article" target="_blank">About</a>
+      <a href="https://us21.list-manage.com/contact-form?u=14a6103181dad2d5ea87f83c8&form_id=af44a2d187fa4f66659241aff57d2d28" target="_blank">Submit Issues or Feedback </a>
+      <a href="http://eepurl.com/iKqI_k" target="_blank">Join the XCoach Mailing List</a>
     </div>
 
     <script src="lib/chart.umd.js"></script>

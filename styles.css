@@ -1,0 +1,162 @@
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#fourSquares {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 2048px;
+}
+
+#decisionDiv, #logoDiv, #visitCountGraphicsDiv, #visitMinutesGraphicsDiv {
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 600px;
+    align-items: center;
+}
+
+#logoDiv img {
+    max-width: 100%;
+    max-height: 512px;
+    object-fit: contain;
+}
+
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+
+#pageFooter {
+    text-align: center;
+    padding: 10px;
+    background-color: #f2f2f2;
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+}
+
+#pageFooter a {
+    margin: 0 10px;
+    color: #333;
+    text-decoration: none;
+}
+
+#pageFooter a:hover {
+    text-decoration: underline;
+}
+
+/* ------------- This is the decision div styling  ------------------- */
+
+#decisionDiv {
+    padding: 20px;
+    background-color: #fffff;
+    border-radius: 8px; /* rounded corners */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: slight shadow for depth */
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Space between elements */
+}
+
+#decisionDiv h2 {
+    color: #333; /* Dark grey color for text */
+    margin-bottom: 16px;
+}
+
+#priorityList {
+    list-style: none; /* Remove default list style */
+    padding: 0;
+    margin: 0;
+}
+
+#priorityList li {
+    font-size: 22px;
+    list-style-type: none;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#priorityList li button {
+    margin-left: 30px;
+    padding: 3px 6px; /* Adjust padding to your liking */
+    background-color: #f3f3f3; /* Light grey background */
+    border: 1px solid #ddd; /* Slightly darker border */
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer; /* Changes cursor to pointer on hover */
+    font-size: 0.4em; /* Smaller font size */
+}
+
+#priorityList li button:hover {
+    background-color: #e7e7e7; /* Slightly darker grey on hover */
+}
+
+#priorityForm {
+    display: flex;
+    gap: 10px; /* Space between input and button */
+}
+
+#priorityForm input[type="text"] {
+    flex: 1; /* Allows input to take up available space */
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+#priorityForm button, #proceedToX {
+    background-color: #007bff; /* Bootstrap primary color */
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#priorityForm button:hover, #proceedToX:hover {
+    background-color: #0056b3; /* Darken color on hover */
+}
+
+#timeLimit {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px; /* Space below the input */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#decision {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+#timeLimit, #proceedToX {
+    width: auto; /* Resets width to be auto, allowing padding to take effect without stretching to 100% */
+    padding: 10px; /* Adds padding for aesthetics and touch friendliness */
+}
+
+#XCount, #XMinutes {
+    font-size: 18px;
+    padding: 5px;
+}
+
+#XCount span, #XMinutes span {
+    font-size: 22px;
+    color: #007bff;
+    font-weight: bold;
+}

@@ -85,12 +85,13 @@ function compileAndStoreDailyData() {
         let lastVisitDate = data.lastVisitDate;
         let dailyData = data.dailyData || [];
 
-        if (lastVisitDate) {
+        if (lastVisitDate && data.XVisitSeconds > 0 && data.XVisitCount > 0) {
             dailyData.push({
                 date: lastVisitDate,
-                XVisitCount: data.XVisitCount || 0,
-                XVisitSeconds: data.XVisitSeconds || 0,
+                XVisitCount: data.XVisitCount,
+                XVisitSeconds: data.XVisitSeconds,
             });
+            // data pushed. Now reset
             chrome.storage.local.set({
                 XVisitCount: 0,
                 XVisitSeconds: 0,
@@ -102,7 +103,7 @@ function compileAndStoreDailyData() {
                 console.log(data);
             });
         } else {
-            console.error(`Problem compiled data for ${lastVisitDate}.`);
+            console.log(`Daily data pushed for ${lastVisitDate} but no data to store.`);
         }
     });
 }
@@ -242,8 +243,8 @@ function setLastVisitDateToLocal() {
     let day = now.getDate();
 
     // Ensure month and day are in 2-digit format
-  month = ('0' + month).slice(-2);
-  day = ('0' + day).slice(-2);
+    month = ('0' + month).slice(-2);
+    day = ('0' + day).slice(-2);
 
     let today = `${year}-${month}-${day}`;
 

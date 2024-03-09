@@ -1,4 +1,8 @@
-console.log = function() {};
+// TODO: remove these from global scope if you no longer need them
+let visitCountChart;
+let visitMinutesChart;
+
+// console.log = function() {};
 
 function updateCountDisplay() {
     const countSpan = document.getElementById('count');
@@ -113,16 +117,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Charting ---------
-// Assuming you have two canvas elements with these IDs in your HTML
-var ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
-var ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
+let ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
+let ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
 
 chrome.storage.local.get('dailyData', function(data) {
 
     if (!data.dailyData || data.dailyData.length === 0) {
         console.log("No daily data available yet.");
-        document.getElementById("noContentDiv").textContent = (
-           "No data available yet. Start using X/Twitter and data will appear here."
+        document.getElementById("visitCountGraphicsDiv").textContent = (
+           "Your X / Twitter Visit Count history will appear here soon!"
+        );
+        document.getElementById("visitMinutesGraphicsDiv").textContent = (
+           "Your X / Twitter Visit Minutes history will appear here soon!"
         );
         return;
     }
@@ -144,7 +150,7 @@ chrome.storage.local.get('dailyData', function(data) {
     var meanVisitMinutesArray = Array(dates.length).fill(meanVisitMinutes);
 
     // Create the Daily Visit Count Chart
-    var visitCountChart = new Chart(ctxVisitCount, {
+    visitCountChart = new Chart(ctxVisitCount, {
         type: 'line',
         data: {
             labels: dates,
@@ -173,7 +179,7 @@ chrome.storage.local.get('dailyData', function(data) {
     });
 
     // Create the Daily Visit Minutes Chart
-    var visitMinutesChart = new Chart(ctxVisitMinutes, {
+    visitMinutesChart = new Chart(ctxVisitMinutes, {
         type: 'line',
         data: {
             labels: dates,

@@ -65,7 +65,7 @@ function addPriorityToList(priority, index) {
     priorityList.appendChild(li);
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
+    deleteBtn.textContent = 'x';
     deleteBtn.onclick = function() {
         deletePriority(index);
     };
@@ -125,10 +125,10 @@ chrome.storage.local.get('dailyData', function(data) {
     if (!data.dailyData || data.dailyData.length === 0) {
         console.log("No daily data available yet.");
         document.getElementById("visitCountGraphicsDiv").textContent = (
-           "Your X / Twitter Visit Count history will appear here soon!"
+           "X / Twitter Visit Count history will appear soon!"
         );
         document.getElementById("visitMinutesGraphicsDiv").textContent = (
-           "Your X / Twitter Visit Minutes history will appear here soon!"
+           "X / Twitter Visit Minutes history will appear soon!"
         );
         return;
     }

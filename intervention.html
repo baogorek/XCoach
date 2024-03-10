@@ -20,11 +20,11 @@
 
             <h1>Today so far</h1>
             <div id="statsToday">
-              <div id="XCount">You've visited X / Twitter <span id="count">0</span> <b>times</b></div>
-              <div id="XMinutes">You've spent <span id="minutes">0</span> <b>minutes</b> on X / Twitter</div>
+              <div id="XCount">You've visited X <span id="count">NA</span> <b>times</b></div>
+              <div id="XMinutes">You've spent <span id="minutes">NA</span> <b>minutes</b> on X</div>
             </div>
 
-            <h1>Proceed to X / Twitter</h1> 
+            <h1>Proceed to X</h1> 
             <div id="decision">
                 <input type="number" id="timeLimit" placeholder="Session Lifetime Minutes" min="2">
                 <button id="proceedToX">Start Session</button>
@@ -38,10 +38,12 @@
 
         <div id="visitCountGraphicsDiv">
             <canvas id="visitCountChart"></canvas>
+            <p>Daily X sessions started, for days with at least one session</p>
         </div>
 
         <div id="visitMinutesGraphicsDiv">
             <canvas id="visitMinutesChart"></canvas>
+            <p>Daily time on X, for days for days with at least one session</p>
         </div>
     </div>
 

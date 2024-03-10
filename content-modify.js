@@ -8,12 +8,16 @@ handleOnMessageContent = (request, sender, sendResponse) => {
         // Banner styling
         warningBanner.style.position = 'fixed';
         warningBanner.style.top = '0';
-        warningBanner.style.left = '0';
-        warningBanner.style.width = '100%';
-        warningBanner.style.backgroundColor = 'red';
+        warningBanner.style.left = '50%';
+        warningBanner.style.transform = 'translateX(-60%)';
+        warningBanner.style.backgroundColor = '#FF4500';
         warningBanner.style.color = 'white';
         warningBanner.style.textAlign = 'center';
-        warningBanner.style.padding = '10px';
+        warningBanner.style.paddingLeft = '20px';
+        warningBanner.style.paddingRight = '20px';
+        warningBanner.style.paddingTop = '10px';
+        warningBanner.style.paddingBottom = '10px';
+        warningBanner.style.borderRadius = '10px';
         warningBanner.style.zIndex = '1000';
         warningBanner.innerText = 'Your XCoach: This tab will close in under a minute!';
 

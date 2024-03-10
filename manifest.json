@@ -31,7 +31,7 @@
     ],
     "web_accessible_resources": [
         {
-            "resources": ["intervention.html"],
+            "resources": ["intervention.html", "images/icon1024.png"],
             "matches": ["<all_urls>"]
         }
     ],

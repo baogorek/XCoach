@@ -53,11 +53,10 @@ handleOnMessageContent = (request, sender, sendResponse) => {
 
 chrome.runtime.onMessage.addListener(handleOnMessageContent);
 
-// Twitter / X intervention mechanism ------- 
+// Twitter / X intervention mechanism -------
 chrome.storage.local.get('temporaryRedirectDisable', function(data) {
   if (!data.temporaryRedirectDisable) {
-    window.location.href = "chrome-extension://ipifmofnonjimpofbdankhjjajkbnnch/intervention.html";
+    const interventionUrl = chrome.runtime.getURL("intervention.html");
+    window.location.href = interventionUrl;
   }
 });
-
-

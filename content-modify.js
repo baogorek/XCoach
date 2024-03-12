@@ -1,5 +1,17 @@
-console.log = function() {};
+// console.log = function() {};
 
+// The Intervention mechanism -------
+chrome.storage.local.get('temporaryRedirectDisable', function(data) {
+    console.log(data);
+    if (!data.temporaryRedirectDisable) {
+        const interventionUrl = chrome.runtime.getURL("intervention.html");
+        console.log("InterventionURL is", interventionUrl);
+        window.location.href = interventionUrl;
+    }
+});
+// End Intervention mechanism ------
+
+// Runtime message handler ----- 
 handleOnMessageContent = (request, sender, sendResponse) => {
     if (request.action === "warnClose") { // As in, warn that it's about to close
         let warningBanner = document.createElement('div');
@@ -48,15 +60,4 @@ handleOnMessageContent = (request, sender, sendResponse) => {
     } 
 };
 
-
-// Code that runs regardless ------------------------------------
-
 chrome.runtime.onMessage.addListener(handleOnMessageContent);
-
-// Twitter / X intervention mechanism -------
-chrome.storage.local.get('temporaryRedirectDisable', function(data) {
-  if (!data.temporaryRedirectDisable) {
-    const interventionUrl = chrome.runtime.getURL("intervention.html");
-    window.location.href = interventionUrl;
-  }
-});

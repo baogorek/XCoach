@@ -1,6 +1,6 @@
 // Utility functions for the developer --------------------------------
 
-// console.log = function() {};
+ console.log = function() {};
 
 function clearAllChromeLocalData() {
     chrome.storage.local.clear(function() {
@@ -73,10 +73,11 @@ function replaceDailyDataWithTestData() {
 // Data functions -----------------------------------------------------------
 
 function scheduleDailyDataCompilation() {
-  // Calculate the time until the next midnight
+  // scheduled to go off midnight of next day provided there's twitter usage on day
+  // NOTE: I don't think I want to schedule it recurring , periodInMinutes: 1440 });
   let now = new Date();
   let nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  chrome.alarms.create("compileDailyData", { when: nextMidnight.getTime(), periodInMinutes: 1440 });
+  chrome.alarms.create("compileDailyData", {when: nextMidnight.getTime()});
 }
 
 function compileAndStoreDailyData() {
@@ -98,9 +99,10 @@ function compileAndStoreDailyData() {
                 dailyData: dailyData,
             }, function() {
                 console.log(`Data compiled for ${lastVisitDate} and variables reset.`);
-                console.log(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
-                "is the time after the alarm has run. And here is the data:")
-                console.log(data);
+                // Reload intervention tab in case this was triggered manually later in the day
+                chrome.storage.local.get('interventionTabId', (result) => {
+                    reloadTabIfOpen(result.interventionTabId);
+                }); 
             });
         } else {
             console.log(`Daily data pushed for ${lastVisitDate} but no data to store.`);
@@ -192,14 +194,18 @@ function closeAllTwitterTabs(tabsToClose) {
 function warnAllTwitterTabs(tabsToWarn) {
     console.log("Warn the twitter tabs:", tabsToWarn);
     tabsToWarn.forEach(tabId => {
-        chrome.tabs.sendMessage(tabId, { action: "warnClose", tabId: tabId });
+        chrome.tabs.sendMessage(tabId, {action: "warnClose", tabId: tabId},
+            function(response) { console.log("warn response"); }
+        );
     });
 }
 
 function removeWarningAllTwitterTabs(tabsToClear) {
     console.log("Remove the warning for the twitter tabs:", tabsToClear);
     tabsToClear.forEach(tabId => {
-        chrome.tabs.sendMessage(tabId, { action: "removeWarning", tabId: tabId });
+        chrome.tabs.sendMessage(tabId, {action: "removeWarning", tabId: tabId},
+            function(response) { console.log("close response"); }
+        );
     });
 }
 
@@ -251,7 +257,6 @@ function setLastVisitDateToLocal() {
 function setOpenTwitterTabs(openTwitterTabs) {
     const openTabsArray = Array.from(openTwitterTabs);
     chrome.storage.local.set({ openTwitterTabs: openTabsArray }, function() {
-        console.log('Open Twitter tabs saved');
     });
 }
 
@@ -259,7 +264,6 @@ function getOpenTwitterTabs() {
     return new Promise((resolve, reject) => {
         chrome.storage.local.get({openTwitterTabs: []}, (result) => {
             const openTwitterTabsSet = new Set(result.openTwitterTabs || []);
-            console.log("Getting openTwitterTabs from Chrome local storage:", openTwitterTabsSet);
             resolve(openTwitterTabsSet); // Pass the set to resolve to ensure it's available to then()
         });
     });
@@ -313,7 +317,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // Chrome runtime listeners
 
 chrome.runtime.onInstalled.addListener((details) => {
-    // Just a stub for now
     console.log(`XCoach onInstalledListener activated. Details:`);
     console.log(details);
     if (details.reason === "install") {
@@ -324,7 +327,6 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
-
     console.log("XCoach: Starting Chrome");
     chrome.storage.local.set({ temporaryRedirectDisable: false }, () => {
         console.log('Redirect disable flag set to false');
@@ -335,14 +337,11 @@ chrome.runtime.onStartup.addListener(() => {
     chrome.storage.local.set({ 'interventionTabId': null }, function() {
         console.log('Twitter Open Timestamp reset.');
     });
-    scheduleDailyDataCompilation();
     setOpenTwitterTabs(new Set());
     wipeTimers();
 }); 
 
 const handleOnMessageBackground = (request, sender, sendResponse) => { 
-    console.log("Handling OnMessage event in background.js");
-
     if (request.action === "allowXAccess") {
         scheduleAllTabsClosure(request.timeLimit);  // Prioritize alarm setting
         incrementVisitCount();
@@ -352,11 +351,13 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
         });
         setInterventionTabId(sender.tab.id);
         setTwitterOpenTimestamp(Date.now());
+        scheduleDailyDataCompilation();  // In case alarms got wiped, redundant
         chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
             console.log("In chrome.tabs.create after creating the first twitter tab of the session");
             getOpenTwitterTabs().then((openTwitterTabs) => {
                 openTwitterTabs.add(newTab.id);
                 setOpenTwitterTabs(openTwitterTabs);
+                sendResponse(); // Respond back to ensure message lifecycle is properly handled
             });
         });
     } else if (request.action === "snooze") {
@@ -365,9 +366,11 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
             if (openTwitterTabs.size > 0) {
                 console.log("Snooze 2 minutes requested");
                 removeWarningAllTwitterTabs(openTwitterTabs);
+                sendResponse();
             }
         });
     }
+    return true;  //  tells Chrome that you intend to respond asynchronously
 };
 
 // Chrome tabs listeners: has to work for ANY chrome tab at any time -----

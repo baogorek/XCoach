@@ -1,8 +1,22 @@
-// TODO: remove these from global scope if you no longer need them
-let visitCountChart;
-let visitMinutesChart;
+ console.log = function() {};
 
-// console.log = function() {};
+// Run every time intervention page is loaded ---
+// There may be a smarter way to not have this in global code running unconditionally
+// If the alarm never went off, wipe all alarms (which hopefully resets things)
+// and trigger what was supposed to run by setting an alarm in the past
+// Once the user proceeds to X, the alarm will be set again for the next midnight
+chrome.alarms.get("compileDailyData", function(alarm) {
+    if (alarm) {
+        let now = new Date().getTime();
+        if (alarm.scheduledTime < now) {
+            console.log("compileDailyData alarm is stuck in the past, attempting to rectify.");
+            chrome.alarms.clear();
+            chrome.alarms.create("compileDailyData", { when: Date.now() - 5000 });  // In the past
+        }
+    }
+});
+
+// Functions --------------------
 
 function updateCountDisplay() {
     const countSpan = document.getElementById('count');
@@ -84,7 +98,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let timeLimit = parseInt(document.getElementById('timeLimit').value, 10);
         
         if (!isNaN(timeLimit) && timeLimit >= 2) {
-            chrome.runtime.sendMessage({ action: "allowXAccess", timeLimit: timeLimit});
+            chrome.runtime.sendMessage(
+                {action: "allowXAccess", timeLimit: timeLimit},
+                function(response) {console.log("proceedToX response:", response)} 
+            );
         } else {
             alert('Please enter a valid time limit of 2 minutes or more in whole number increments.');
         }
@@ -117,9 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Charting ---------
-let ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
-let ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
-
 chrome.storage.local.get('dailyData', function(data) {
 
     if (!data.dailyData || data.dailyData.length === 0) {
@@ -133,24 +147,27 @@ chrome.storage.local.get('dailyData', function(data) {
         return;
     }
 
-    var dates = data.dailyData.map(entry => entry.date);
-    var visitCounts = data.dailyData.map(entry => entry.XVisitCount);
-    var visitMinutes = data.dailyData.map(entry => entry.XVisitSeconds / 60);
+    let dates = data.dailyData.map(entry => entry.date);
+    let visitCounts = data.dailyData.map(entry => entry.XVisitCount);
+    let visitMinutes = data.dailyData.map(entry => entry.XVisitSeconds / 60);
 
     // Find max values for scaling
-    var maxVisitCount = Math.max(...visitCounts) * 1.1;
-    var maxVisitMinutes = Math.max(...visitMinutes) * 1.1;
+    let maxVisitCount = Math.max(...visitCounts) * 1.1;
+    let maxVisitMinutes = Math.max(...visitMinutes) * 1.1;
 
     // Calculate means
-    var meanVisitCount = visitCounts.reduce((a, b) => a + b, 0) / visitCounts.length;
-    var meanVisitMinutes = visitMinutes.reduce((a, b) => a + b, 0) / visitMinutes.length;
+    let meanVisitCount = visitCounts.reduce((a, b) => a + b, 0) / visitCounts.length;
+    let meanVisitMinutes = visitMinutes.reduce((a, b) => a + b, 0) / visitMinutes.length;
 
     // Create arrays of mean values for all labels
-    var meanVisitCountArray = Array(dates.length).fill(meanVisitCount);
-    var meanVisitMinutesArray = Array(dates.length).fill(meanVisitMinutes);
+    let meanVisitCountArray = Array(dates.length).fill(meanVisitCount);
+    let meanVisitMinutesArray = Array(dates.length).fill(meanVisitMinutes);
+
+    let ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
+    let ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
 
     // Create the Daily Visit Count Chart
-    visitCountChart = new Chart(ctxVisitCount, {
+    let visitCountChart = new Chart(ctxVisitCount, {
         type: 'line',
         data: {
             labels: dates,
@@ -179,7 +196,7 @@ chrome.storage.local.get('dailyData', function(data) {
     });
 
     // Create the Daily Visit Minutes Chart
-    visitMinutesChart = new Chart(ctxVisitMinutes, {
+    let visitMinutesChart = new Chart(ctxVisitMinutes, {
         type: 'line',
         data: {
             labels: dates,

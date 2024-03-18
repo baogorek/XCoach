@@ -1,4 +1,4 @@
-// console.log = function() {};
+console.log = function() {};
 
 // The Intervention mechanism -------
 chrome.storage.local.get('temporaryRedirectDisable', function(data) {
@@ -52,12 +52,15 @@ handleOnMessageContent = (request, sender, sendResponse) => {
         warningBanner.appendChild(snoozeBtn);
 
         document.body.appendChild(warningBanner);
+        sendResponse();
 
     } else if (request.action === "removeWarning") {
         let warningBanner = document.getElementById('RedWarningBannerId');
         warningBanner.remove();
         console.log('Tried to remove warning banner');
+        sendResponse();
     } 
+    return true; // if I was to use sendResponse, I'd do so asyncronously. Keep channel open.
 };
 
 chrome.runtime.onMessage.addListener(handleOnMessageContent);

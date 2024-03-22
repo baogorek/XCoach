@@ -1,6 +1,6 @@
 // Utility functions for the developer --------------------------------
 
- console.log = function() {};
+//  console.log = function() {};
 
 function clearAllChromeLocalData() {
     chrome.storage.local.clear(function() {
@@ -20,12 +20,6 @@ function showData() {
 }
 
 function showAlarms() {
-    chrome.alarms.get("compileDailyData", function(alarm) {
-        if (alarm) {
-            let alarmDate = new Date(alarm.scheduledTime);
-            console.log(`compileDailyData to go off at ${alarmDate}`);
-        };
-    });
 
     chrome.alarms.get("closeTimer", function(alarm) {
         if (alarm) {
@@ -42,11 +36,35 @@ function showAlarms() {
     });
 }
 
-function triggerAlarm() {
-    chrome.alarms.create("compileDailyData", { when: Date.now() + 5000 });
+function replaceDailyDataWithTestData1() {
+    const testData = [
+        {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028},
+        {"date": "2024-02-02", "XVisitCount": 3, "XVisitSeconds": 6157},
+        {"date": "2024-02-03", "XVisitCount": 7, "XVisitSeconds": 5817},
+        {"date": "2024-02-04", "XVisitCount": 9, "XVisitSeconds": 6005},
+        {"date": "2024-02-05", "XVisitCount": 6, "XVisitSeconds": 6119}
+    ];
+
+    chrome.storage.local.set({'dailyData': testData}, function() {
+        console.log('dailyData has been replaced with test data.');
+    });
 }
 
-function replaceDailyDataWithTestData() {
+function replaceDailyDataWithTestData5() {
+    const testData = [
+        {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028},
+        {"date": "2024-02-02", "XVisitCount": 3, "XVisitSeconds": 6157},
+        {"date": "2024-02-03", "XVisitCount": 7, "XVisitSeconds": 5817},
+        {"date": "2024-02-04", "XVisitCount": 9, "XVisitSeconds": 6005},
+        {"date": "2024-02-05", "XVisitCount": 6, "XVisitSeconds": 6119}
+    ];
+
+    chrome.storage.local.set({'dailyData': testData}, function() {
+        console.log('dailyData has been replaced with test data.');
+    });
+}
+
+function replaceDailyDataWithTestData15() {
     const testData = [
         {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028},
         {"date": "2024-02-02", "XVisitCount": 3, "XVisitSeconds": 6157},
@@ -71,44 +89,6 @@ function replaceDailyDataWithTestData() {
 }
 
 // Data functions -----------------------------------------------------------
-
-function scheduleDailyDataCompilation() {
-  // scheduled to go off midnight of next day provided there's twitter usage on day
-  // NOTE: I don't think I want to schedule it recurring , periodInMinutes: 1440 });
-  let now = new Date();
-  let nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  chrome.alarms.create("compileDailyData", {when: nextMidnight.getTime()});
-}
-
-function compileAndStoreDailyData() {
-    chrome.storage.local.get(
-        ['XVisitCount', 'XVisitSeconds', 'dailyData', 'lastVisitDate'], function(data) {
-        let lastVisitDate = data.lastVisitDate;
-        let dailyData = data.dailyData || [];
-
-        if (lastVisitDate && data.XVisitSeconds > 0 && data.XVisitCount > 0) {
-            dailyData.push({
-                date: lastVisitDate,
-                XVisitCount: data.XVisitCount,
-                XVisitSeconds: data.XVisitSeconds,
-            });
-            // data pushed. Now reset
-            chrome.storage.local.set({
-                XVisitCount: 0,
-                XVisitSeconds: 0,
-                dailyData: dailyData,
-            }, function() {
-                console.log(`Data compiled for ${lastVisitDate} and variables reset.`);
-                // Reload intervention tab in case this was triggered manually later in the day
-                chrome.storage.local.get('interventionTabId', (result) => {
-                    reloadTabIfOpen(result.interventionTabId);
-                }); 
-            });
-        } else {
-            console.log(`Daily data pushed for ${lastVisitDate} but no data to store.`);
-        }
-    });
-}
 
 function updateTotalOpenTime(sessionDurationInSeconds) {
     chrome.storage.local.get(['XVisitSeconds', 'twitterOpenTimestamp'], function(data) {
@@ -287,14 +267,6 @@ function setTwitterOpenTimestamp(timestamp) {
 // Chrome alarms listeners
 chrome.alarms.onAlarm.addListener((alarm) => {
     console.log("in the chrome.alarms.onAlarm listener with alarm", alarm);
-    if (alarm.name === "compileDailyData") {
-        console.log("Alarm: compileDailyData triggered");
-        try {
-            compileAndStoreDailyData();
-        } catch (error) {
-            console.error("Error handling compileDailyData alarm:", error);
-        }
-    }
     if (alarm.name === "warnTimer") {
         console.log("Alarm: warnTimer triggered");
         getOpenTwitterTabs().then((openTwitterTabs) => {
@@ -351,7 +323,6 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
         });
         setInterventionTabId(sender.tab.id);
         setTwitterOpenTimestamp(Date.now());
-        scheduleDailyDataCompilation();  // In case alarms got wiped, redundant
         chrome.tabs.create({ url: 'https://twitter.com' }, (newTab) => {
             console.log("In chrome.tabs.create after creating the first twitter tab of the session");
             getOpenTwitterTabs().then((openTwitterTabs) => {

@@ -11,8 +11,7 @@ async function compileAndStoreDailyDataAsync() {
 
             // Get current date in the same format as lastVisitDate
             let now = new Date();
-            let currentDate = now.toISOString().split('T')[0]; // Format: yyyy-mm-dd
-
+            let currentDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
             if (lastVisitDate !== currentDate && data.XVisitSeconds > 0 && data.XVisitCount > 0) {
                 // remember, we're only storing history for days that user visited X
                 dailyData.push({
@@ -117,13 +116,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     proceedToXButton.addEventListener('click', function() {
         let timeLimit = parseInt(document.getElementById('timeLimit').value, 10);
         
-        if (!isNaN(timeLimit) && timeLimit >= 2) {
+        if (!isNaN(timeLimit) && timeLimit >= 2 && timeLimit <= 120) {
             chrome.runtime.sendMessage(
                 {action: "allowXAccess", timeLimit: timeLimit},
                 function(response) {console.log("proceedToX response:", response)} 
             );
         } else {
-            alert('Please enter a valid time limit of 2 minutes or more in whole number increments.');
+            alert('Session length must be between 2 to 120 minutes.');
         }
     });
 
@@ -155,13 +154,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Charting ---------
     chrome.storage.local.get('dailyData', function(data) {
     
-        if (!data.dailyData || data.dailyData.length === 0) {
+        if (!data.dailyData || data.dailyData.length < 7) {
             console.log("No daily data available yet.");
             document.getElementById("visitCountGraphicsDiv").textContent = (
-               "X / Twitter Visit Count history will appear soon!"
+               "X Visit Count history will appear after 7 days of usage"
             );
             document.getElementById("visitMinutesGraphicsDiv").textContent = (
-               "X / Twitter Visit Minutes history will appear soon!"
+               "X Visit Minutes history will appear after 7 days of usage"
             );
             return;
         }

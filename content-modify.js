@@ -1,4 +1,4 @@
-// console.log = function() {};
+console.log = function() {};
 
 // The Intervention mechanism -------
 chrome.storage.local.get('temporaryRedirectDisable', function(data) {

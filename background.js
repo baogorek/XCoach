@@ -1,6 +1,6 @@
 // Utility functions for the developer --------------------------------
 
-//  console.log = function() {};
+console.log = function() {};
 
 function clearAllChromeLocalData() {
     chrome.storage.local.clear(function() {

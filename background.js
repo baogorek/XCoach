@@ -2,19 +2,19 @@
 
 // console.log = function() {};
 
-function clearAllChromeLocalData() {
-    chrome.storage.local.clear(function() {
+function clearAllChromeSyncData() {
+    chrome.storage.sync.clear(function() {
         var error = chrome.runtime.lastError;
         if (error) {
-            console.error('Error clearing the local storage:', error);
+            console.error('Error clearing the sync storage:', error);
         } else {
-            console.log('All local storage data cleared.');
+            console.log('All sync storage data cleared.');
         }
     });
 }
 
 function showData() {
-    chrome.storage.local.get(null, function(data) {
+    chrome.storage.sync.get(null, function(data) {
         console.log(data);
     });
 }
@@ -41,7 +41,7 @@ function replaceDailyDataWithTestData1() {
         {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028}
     ];
 
-    chrome.storage.local.set({'dailyData': testData}, function() {
+    chrome.storage.sync.set({'dailyData': testData}, function() {
         console.log('dailyData has been replaced with test data.');
     });
 }
@@ -55,7 +55,7 @@ function replaceDailyDataWithTestData5() {
         {"date": "2024-02-05", "XVisitCount": 6, "XVisitSeconds": 6119}
     ];
 
-    chrome.storage.local.set({'dailyData': testData}, function() {
+    chrome.storage.sync.set({'dailyData': testData}, function() {
         console.log('dailyData has been replaced with test data.');
     });
 }
@@ -79,7 +79,7 @@ function replaceDailyDataWithTestData15() {
         {"date": "2024-02-15", "XVisitCount": 5, "XVisitSeconds": 6094}
     ];
 
-    chrome.storage.local.set({'dailyData': testData}, function() {
+    chrome.storage.sync.set({'dailyData': testData}, function() {
         console.log('dailyData has been replaced with test data.');
     });
 }
@@ -87,16 +87,16 @@ function replaceDailyDataWithTestData15() {
 // Data functions -----------------------------------------------------------
 
 function updateTotalOpenTime(sessionDurationInSeconds) {
-    chrome.storage.local.get(['XVisitSeconds', 'XOpenTimestamp'], function(data) {
+    chrome.storage.sync.get(['XVisitSeconds', 'XOpenTimestamp'], function(data) {
         if (data.XOpenTimestamp) {
             let dailyVisitTime = data.XVisitSeconds || 0;
             let sessionDurationInSeconds = (Date.now() - data.XOpenTimestamp) / 1000;
 
             dailyVisitTime += sessionDurationInSeconds; 
 
-            chrome.storage.local.set({ 'XVisitSeconds': dailyVisitTime}, function() {
+            chrome.storage.sync.set({ 'XVisitSeconds': dailyVisitTime}, function() {
                 console.log('Total open time today updated to:', dailyVisitTime, 'seconds');
-                chrome.storage.local.set({ 'XOpenTimestamp': null }, function() {
+                chrome.storage.sync.set({ 'XOpenTimestamp': null }, function() {
                     console.log('X/ Open Timestamp reset.');
                 });
             });
@@ -157,11 +157,11 @@ function closeAllXTabs(tabsToClose) {
     updateTotalOpenTime();
     
     //  Reinstantiate the intervention mechanism
-    chrome.storage.local.set({temporaryRedirectDisable: false}, () => {
+    chrome.storage.sync.set({temporaryRedirectDisable: false}, () => {
         console.log('Redirect disable flag updated to false');
     });
 
-    chrome.storage.local.get('interventionTabId', (result) => {
+    chrome.storage.sync.get('interventionTabId', (result) => {
         reloadTabIfOpen(result.interventionTabId);
     }); 
 }
@@ -202,10 +202,10 @@ function scheduleAllTabsClosure(timeLimitInMinutes) {
 }
 
 function incrementVisitCount() {
-    chrome.storage.local.get('XVisitCount', function(data) {
+    chrome.storage.sync.get('XVisitCount', function(data) {
         let currentCount = data.XVisitCount || 0;
         currentCount++;
-        chrome.storage.local.set({ 'XVisitCount': currentCount }, function() {
+        chrome.storage.sync.set({ 'XVisitCount': currentCount }, function() {
             console.log('Visit count incremented to', currentCount);
         });
     });
@@ -223,22 +223,22 @@ function setLastVisitDateToLocal() {
 
     let today = `${year}-${month}-${day}`;
 
-    chrome.storage.local.set({ 'lastVisitDate': today }, function() {
+    chrome.storage.sync.set({ 'lastVisitDate': today }, function() {
         console.log(`lastVisitDate updated to ${today}, reflecting local time zone.`);
     });
 }
 
-// Get and Set "local" variables from Chrome local storage
+// Get and Set "sync" variables from Chrome sync storage
 
 function setOpenXTabs(openXTabs) {
     const openTabsArray = Array.from(openXTabs);
-    chrome.storage.local.set({ openXTabs: openTabsArray }, function() {
+    chrome.storage.sync.set({ openXTabs: openTabsArray }, function() {
     });
 }
 
 function getOpenXTabs() {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get({openXTabs: []}, (result) => {
+        chrome.storage.sync.get({openXTabs: []}, (result) => {
             const openXTabsSet = new Set(result.openXTabs || []);
             resolve(openXTabsSet); // Pass the set to resolve to ensure it's available to then()
         });
@@ -246,13 +246,13 @@ function getOpenXTabs() {
 }
 
 function setInterventionTabId(tabId) {
-    chrome.storage.local.set({ interventionTabId: tabId }, function() {
+    chrome.storage.sync.set({ interventionTabId: tabId }, function() {
         console.log(`Intervention Tab ID saved: ${tabId}`);
     });
 }
 
 function setXOpenTimestamp(timestamp) {
-    chrome.storage.local.set({ XOpenTimestamp: timestamp }, function() {
+    chrome.storage.sync.set({ XOpenTimestamp: timestamp }, function() {
         console.log(`X Open Timestamp saved: ${timestamp}`);
     });
 }
@@ -296,13 +296,13 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 chrome.runtime.onStartup.addListener(() => {
     console.log("XCoach: Starting Chrome");
-    chrome.storage.local.set({ temporaryRedirectDisable: false }, () => {
+    chrome.storage.sync.set({ temporaryRedirectDisable: false }, () => {
         console.log('Redirect disable flag set to false');
     });
-    chrome.storage.local.set({ 'XOpenTimestamp': null }, function() {
+    chrome.storage.sync.set({ 'XOpenTimestamp': null }, function() {
         console.log('X Open Timestamp reset.');
     });
-    chrome.storage.local.set({ 'interventionTabId': null }, function() {
+    chrome.storage.sync.set({ 'interventionTabId': null }, function() {
         console.log('X Open Timestamp reset.');
     });
     setOpenXTabs(new Set());
@@ -314,7 +314,7 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
         scheduleAllTabsClosure(request.timeLimit);  // Prioritize alarm setting
         incrementVisitCount();
         setLastVisitDateToLocal();
-        chrome.storage.local.set({temporaryRedirectDisable: true}, () => {
+        chrome.storage.sync.set({temporaryRedirectDisable: true}, () => {
             console.log('Redirection disable flag updated to true');
         });
         setInterventionTabId(sender.tab.id);
@@ -328,10 +328,10 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
             });
         });
     } else if (request.action === "snooze") {
-        scheduleAllTabsClosure(2);  // Prioritize alarm setting
+        scheduleAllTabsClosure(request.minutes);  // Prioritize alarm setting
         getOpenXTabs().then((openXTabs) => {
             if (openXTabs.size > 0) {
-                console.log("Snooze 2 minutes requested");
+                console.log(`Snooze for ${request.minutes} minutes requested`);
                 removeWarningAllXTabs(openXTabs);
                 sendResponse();
             }
@@ -344,7 +344,7 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
 
 const handleTabsOnUpdated = (tabId, changeInfo, tab) => {
     console.log("Handling Tabs OnUpdated event in background.js");
-    if (changeInfo.url) {  // Don't pull data from local storage unless you have to
+    if (changeInfo.url) {  // Don't pull data from storage unless you have to
         getOpenXTabs().then((openXTabs) => {
             if (openXTabs.size > 0) {
                 console.log(`Tab ${tabId} changed: ${changeInfo.url}. onUpdated listener alerted`);

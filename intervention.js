@@ -4,7 +4,7 @@
 
 async function compileAndStoreDailyDataAsync() {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(
+        chrome.storage.sync.get(
             ['XVisitCount', 'XVisitSeconds', 'dailyData', 'lastVisitDate'], async function(data) {
             let lastVisitDate = data.lastVisitDate;
             let dailyData = data.dailyData || [];
@@ -19,7 +19,7 @@ async function compileAndStoreDailyDataAsync() {
                     XVisitCount: data.XVisitCount,
                     XVisitSeconds: data.XVisitSeconds,
                 });
-                chrome.storage.local.set({
+                chrome.storage.sync.set({
                     XVisitCount: 0,
                     XVisitSeconds: 0,
                     dailyData: dailyData,
@@ -39,21 +39,21 @@ async function compileAndStoreDailyDataAsync() {
 
 function updateCountDisplay() {
     const countSpan = document.getElementById('count');
-    chrome.storage.local.get('XVisitCount', function(data) {
+    chrome.storage.sync.get('XVisitCount', function(data) {
         countSpan.textContent = data.XVisitCount || 0;
     });
-    chrome.storage.local.get('XVisitSeconds', function(data) {
+    chrome.storage.sync.get('XVisitSeconds', function(data) {
         let visitSeconds = data.XVisitSeconds || 0;
         document.getElementById('minutes').textContent = (visitSeconds / 60).toFixed(1);
     });
 }
 
 function deletePriority(index) {
-    chrome.storage.local.get('priorities', function(data) {
+    chrome.storage.sync.get('priorities', function(data) {
         let priorities = data.priorities || [];
         if (index >= 0 && index < priorities.length) {
             priorities.splice(index, 1);
-            chrome.storage.local.set({'priorities': priorities}, function() {
+            chrome.storage.sync.set({'priorities': priorities}, function() {
                 loadAndDisplayPriorities();
             });
         }
@@ -61,7 +61,7 @@ function deletePriority(index) {
 }
 
 function loadAndDisplayPriorities() {
-    chrome.storage.local.get('priorities', function(data) {
+    chrome.storage.sync.get('priorities', function(data) {
         const priorities = data.priorities || [];
         priorityList.innerHTML = ''; // Clear current list
         priorities.forEach(function(priority, index) {
@@ -78,11 +78,11 @@ function loadAndDisplayPriorities() {
 }
 
 function addPriority(priority) {
-    chrome.storage.local.get('priorities', function(data) {
+    chrome.storage.sync.get('priorities', function(data) {
         let priorities = data.priorities || [];
         if (priorities.length < 5) {
             priorities.push(priority);
-            chrome.storage.local.set({'priorities': priorities}, function() {
+            chrome.storage.sync.set({'priorities': priorities}, function() {
                 addPriorityToList(priority, priorities.length - 1);
                 loadAndDisplayPriorities();
             });
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadAndDisplayPriorities();
 
     // Charting ---------
-    chrome.storage.local.get('dailyData', function(data) {
+    chrome.storage.sync.get('dailyData', function(data) {
     
         if (!data.dailyData || data.dailyData.length < 7) {
             console.log("No daily data available yet.");

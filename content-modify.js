@@ -1,7 +1,7 @@
 // console.log = function() {};
 
 // The Intervention mechanism -------
-chrome.storage.local.get('temporaryRedirectDisable', function(data) {
+chrome.storage.sync.get('temporaryRedirectDisable', function(data) {
     console.log(data);
     if (!data.temporaryRedirectDisable) {
         const interventionUrl = chrome.runtime.getURL("intervention.html");
@@ -51,11 +51,10 @@ handleOnMessageContent = (request, sender, sendResponse) => {
         snoozeBtn.onclick = function() {
             let snoozeMinutes = parseInt(snoozeInput.value, 10);
             if (!isNaN(snoozeMinutes) && snoozeMinutes >= 2 && snoozeMinutes <= 120) {
-                chrome.runtime.sendMessage({ action: "snooze", tabId: request.tabId, minutes: snoozeMinutes });
+                chrome.runtime.sendMessage({ action: "snooze", minutes: snoozeMinutes });
             } else {
                 alert('Please enter a valid number of minutes between 2 and 120.');
             }
-            //chrome.runtime.sendMessage({ action: "snooze", tabId: request.tabId });
         };
         warningBanner.appendChild(snoozeBtn);
 

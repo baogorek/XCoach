@@ -2,52 +2,6 @@
 
 // Functions --------------------
 
-async function compileAndStoreDailyDataAsync() {
-    return new Promise((resolve, reject) => {
-        chrome.storage.sync.get(
-            ['XVisitCount', 'XVisitSeconds', 'dailyData', 'lastVisitDate'], async function(data) {
-            let lastVisitDate = data.lastVisitDate;
-            let dailyData = data.dailyData || [];
-
-            // Get current date in the same format as lastVisitDate
-            let now = new Date();
-            let currentDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-            if (lastVisitDate !== currentDate && data.XVisitSeconds > 0 && data.XVisitCount > 0) {
-                // remember, we're only storing history for days that user visited X
-                dailyData.push({
-                    date: lastVisitDate,
-                    XVisitCount: data.XVisitCount,
-                    XVisitSeconds: data.XVisitSeconds,
-                });
-                chrome.storage.sync.set({
-                    XVisitCount: 0,
-                    XVisitSeconds: 0,
-                    dailyData: dailyData,
-                }, () => {
-                    resolve();
-                    console.log(`Daily data pushed for ${lastVisitDate} but no data to store.`);
-                });
-                
-            } else {
-                console.log(`Last Visit Date: ${lastVisitDate}, Current Date: ${currentDate}.`,
-                            `XVisitCount: ${data.XVisitCount}, and nothing to store.`);
-                resolve();
-            }
-        });
-    });
-}
-
-function updateCountDisplay() {
-    const countSpan = document.getElementById('count');
-    chrome.storage.sync.get('XVisitCount', function(data) {
-        countSpan.textContent = data.XVisitCount || 0;
-    });
-    chrome.storage.sync.get('XVisitSeconds', function(data) {
-        let visitSeconds = data.XVisitSeconds || 0;
-        document.getElementById('minutes').textContent = (visitSeconds / 60).toFixed(1);
-    });
-}
-
 function deletePriority(index) {
     chrome.storage.sync.get('priorities', function(data) {
         let priorities = data.priorities || [];
@@ -106,9 +60,106 @@ function addPriorityToList(priority, index) {
     priorityList.appendChild(li);
 }
 
+// Charting functions ---------
+
+function formatDate(date) {
+    return date.toLocaleDateString('en-CA'); // 'en-CA' gives the format YYYY-MM-DD
+}
+
+function generateDateSequence(startDate, numberOfDays) {
+    const dates = [];
+    for (let i = 0; i < numberOfDays; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() - i);
+        dates.push(formatDate(date));
+    }
+    return dates.reverse();
+}
+
+function aggregateSessionTimes(callback) {
+    chrome.storage.sync.get({ sessions: {} }, function(data) {
+        const sessions = data.sessions;
+        const aggregatedTimes = {};
+        const currentDate = formatDate(new Date());
+
+        if (Object.keys(sessions).length === 0) {
+            // If there are no sessions, add a dummy session for the current date
+            aggregatedTimes[currentDate] = 0;
+        } else {
+            // Reduce function to aggregate session times by date
+            Object.entries(sessions).reduce((acc, [start, end]) => {
+                const startDate = formatDate(new Date(parseInt(start)));
+                const sessionDurationMinutes = (end - start) / (1000 * 60); // Duration in minutes
+
+                if (!acc[startDate]) {
+                    acc[startDate] = 0;
+                }
+                acc[startDate] += sessionDurationMinutes;
+                return acc;
+            }, aggregatedTimes);
+        }
+
+        console.log('Aggregated session times by date (in minutes):', aggregatedTimes);
+        document.getElementById('minutes').innerText = aggregatedTimes[currentDate].toFixed(1);
+
+        // Transform aggregatedTimes into arrays for Chart.js
+        const dates = Object.keys(aggregatedTimes);
+        const sessionDurations = Object.values(aggregatedTimes);
+
+        callback(dates, sessionDurations);
+    });
+}
+
+function createVisitMinutesChart(dates, sessionDurations) {
+    const ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
+    const targetDays = 3; // Minimum number of days to display
+    const referenceValue = 60; // Arbitrary reference value for padding
+    let meanLabel;
+
+    meanLabel = dates.length < targetDays ? "Arbitrary Reference for First 7 Days" : "Mean Visit Duration";
+
+    // Generate a complete sequence of dates going backwards
+    const fullDateSequence = generateDateSequence(new Date(), targetDays);
+
+    // Create padded arrays for session durations and reference values
+    const paddedDurations = fullDateSequence.map(date => dates.includes(date) ? sessionDurations[dates.indexOf(date)] : null);
+    const paddedReference = Array(targetDays).fill(referenceValue);
+
+    const maxVisitMinutes = 1.05 * Math.max(referenceValue, ...sessionDurations);
+
+    let visitMinutesChart = new Chart(ctxVisitMinutes, {
+        type: 'line',
+        data: {
+            labels: fullDateSequence,
+            datasets: [{
+                label: 'Daily Visit Duration (minutes)',
+                data: paddedDurations,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }, {
+                label: meanLabel,
+                data: paddedReference,
+                borderColor: 'rgb(255, 159, 64)',
+                borderDash: [5, 5], // Dotted line
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: maxVisitMinutes
+                }
+            }
+        }
+    });
+}
+
+
+// Event Listeners -----------------------
+
 document.addEventListener('DOMContentLoaded', async function() {
-    await compileAndStoreDailyDataAsync();
-    updateCountDisplay();
+    // await compileAndStoreDailyDataAsync();
 
     const proceedToXButton = document.getElementById('proceedToX');
     const timeLimitInput = document.getElementById('timeLimit'); 
@@ -139,7 +190,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const newPriorityInput = document.getElementById('newPriority');
     const priorityList = document.getElementById('priorityList');
 
-
     priorityForm.addEventListener('submit', function(event) {
         event.preventDefault();
         const newPriority = newPriorityInput.value.trim();
@@ -151,97 +201,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   
     loadAndDisplayPriorities();
 
-    // Charting ---------
-    chrome.storage.sync.get('dailyData', function(data) {
-    
-        if (!data.dailyData || data.dailyData.length < 7) {
-            console.log("No daily data available yet.");
-            document.getElementById("visitCountGraphicsDiv").textContent = (
-               "X Visit Count history will appear after 7 days of usage"
-            );
-            document.getElementById("visitMinutesGraphicsDiv").textContent = (
-               "X Visit Minutes history will appear after 7 days of usage"
-            );
-            return;
-        }
-    
-        let dates = data.dailyData.map(entry => entry.date);
-        let visitCounts = data.dailyData.map(entry => entry.XVisitCount);
-        let visitMinutes = data.dailyData.map(entry => entry.XVisitSeconds / 60);
-    
-        // Find max values for scaling
-        let maxVisitCount = Math.max(...visitCounts) * 1.1;
-        let maxVisitMinutes = Math.max(...visitMinutes) * 1.1;
-    
-        // Calculate means
-        let meanVisitCount = visitCounts.reduce((a, b) => a + b, 0) / visitCounts.length;
-        let meanVisitMinutes = visitMinutes.reduce((a, b) => a + b, 0) / visitMinutes.length;
-    
-        // Create arrays of mean values for all labels
-        let meanVisitCountArray = Array(dates.length).fill(meanVisitCount);
-        let meanVisitMinutesArray = Array(dates.length).fill(meanVisitMinutes);
-    
-        let ctxVisitCount = document.getElementById('visitCountChart').getContext('2d');
-        let ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
-    
-        // Create the Daily Visit Count Chart
-        let visitCountChart = new Chart(ctxVisitCount, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [{
-                    label: 'Daily Visit Count',
-                    data: visitCounts,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }, {
-                    label: 'Mean Visit Count',
-                    data: meanVisitCountArray,
-                    borderColor: 'rgb(255, 159, 64)',
-                    borderDash: [5, 5], // Dotted line
-                    tension: 0.1
-                }
-                ]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: maxVisitCount
-                    }
-                }
-            }
-        });
-    
-        // Create the Daily Visit Minutes Chart
-        let visitMinutesChart = new Chart(ctxVisitMinutes, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [{
-                    label: 'Daily Visit Minutes',
-                    data: visitMinutes,
-                    borderColor: 'rgb(255, 99, 132)',
-                    tension: 0.1
-                },
-                {
-                    label: 'Mean Visit Minutes',
-                    data: meanVisitMinutesArray,
-                    borderColor: 'rgb(255, 159, 64)',
-                    borderDash: [5, 5], // Dotted line
-                    tension: 0.1
-                }
-            ]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: maxVisitMinutes
-                    }
-                }
-            }
-    
-        });
-    });
+    // Charting
+    aggregateSessionTimes(createVisitMinutesChart);
 });

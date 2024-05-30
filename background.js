@@ -86,25 +86,6 @@ function replaceDailyDataWithTestData15() {
 
 // Data functions -----------------------------------------------------------
 
-function updateTotalOpenTime(sessionDurationInSeconds) {
-    chrome.storage.sync.get(['XVisitSeconds', 'XOpenTimestamp'], function(data) {
-        if (data.XOpenTimestamp) {
-            let dailyVisitTime = data.XVisitSeconds || 0;
-            let sessionDurationInSeconds = (Date.now() - data.XOpenTimestamp) / 1000;
-
-            dailyVisitTime += sessionDurationInSeconds; 
-
-            chrome.storage.sync.set({ 'XVisitSeconds': dailyVisitTime}, function() {
-                console.log('Total open time today updated to:', dailyVisitTime, 'seconds');
-                chrome.storage.sync.set({ 'XOpenTimestamp': null }, function() {
-                    console.log('X/ Open Timestamp reset.');
-                });
-            });
-        }
-    });
-}
-
-// Tracking functions ---------------------------------------------------
 function trackXTab(tabId) {
     getOpenXTabs().then((openXTabs) => {
         if (openXTabs.size > 0) {
@@ -153,9 +134,7 @@ function closeAllXTabs(tabsToClose) {
     setOpenXTabs(new Set());
   
     wipeTimers();
-
-    updateTotalOpenTime();
-    
+   
     //  Reinstantiate the intervention mechanism
     chrome.storage.sync.set({temporaryRedirectDisable: false}, () => {
         console.log('Redirect disable flag updated to false');
@@ -164,6 +143,31 @@ function closeAllXTabs(tabsToClose) {
     chrome.storage.sync.get('interventionTabId', (result) => {
         reloadTabIfOpen(result.interventionTabId);
     }); 
+
+    // Update the session duration only if the tab was closed before expected
+    chrome.storage.sync.get({ sessions: {}, currentSessionTimestamp: Date.now() }, function(data) {
+        const sessions = data.sessions;
+        const currentSessionTimestamp = data.currentSessionTimestamp;
+        const now = Date.now();
+    
+        // Calculate the existing end time for comparison
+        const existingEndTime = sessions[currentSessionTimestamp] || now;
+        const existingDifference = existingEndTime - currentSessionTimestamp;
+        const currentDifference = now - currentSessionTimestamp;
+    
+        // Update the session with the smaller difference
+        if (currentDifference < existingDifference) {
+            sessions[currentSessionTimestamp] = now;
+            console.log(`Updated session ${currentSessionTimestamp} with new end time: ${now}`);
+        } else {
+            console.log(`Session ${currentSessionTimestamp} already has a smaller difference: ${existingDifference}`);
+        }
+    
+        // Save updated sessions
+        chrome.storage.sync.set({ sessions: sessions }, function() {
+            console.log(`Saved sessions with key: ${currentSessionTimestamp}`);
+        });
+    });
 }
 
 // Messages for content-modify.js (acting on X) ---------------------------
@@ -211,22 +215,6 @@ function incrementVisitCount() {
     });
 }
 
-function setLastVisitDateToLocal() {
-    let now = new Date();
-    let year = now.getFullYear();
-    let month = now.getMonth() + 1; // getMonth() is zero-indexed, so add 1
-    let day = now.getDate();
-
-    // Ensure month and day are in 2-digit format
-    month = ('0' + month).slice(-2);
-    day = ('0' + day).slice(-2);
-
-    let today = `${year}-${month}-${day}`;
-
-    chrome.storage.sync.set({ 'lastVisitDate': today }, function() {
-        console.log(`lastVisitDate updated to ${today}, reflecting local time zone.`);
-    });
-}
 
 // Get and Set "sync" variables from Chrome sync storage
 
@@ -250,13 +238,6 @@ function setInterventionTabId(tabId) {
         console.log(`Intervention Tab ID saved: ${tabId}`);
     });
 }
-
-function setXOpenTimestamp(timestamp) {
-    chrome.storage.sync.set({ XOpenTimestamp: timestamp }, function() {
-        console.log(`X Open Timestamp saved: ${timestamp}`);
-    });
-}
-
 
 // Set up listeners -------------------------------------------------
 
@@ -299,9 +280,6 @@ chrome.runtime.onStartup.addListener(() => {
     chrome.storage.sync.set({ temporaryRedirectDisable: false }, () => {
         console.log('Redirect disable flag set to false');
     });
-    chrome.storage.sync.set({ 'XOpenTimestamp': null }, function() {
-        console.log('X Open Timestamp reset.');
-    });
     chrome.storage.sync.set({ 'interventionTabId': null }, function() {
         console.log('X Open Timestamp reset.');
     });
@@ -311,14 +289,20 @@ chrome.runtime.onStartup.addListener(() => {
 
 const handleOnMessageBackground = (request, sender, sendResponse) => { 
     if (request.action === "allowXAccess") {
-        scheduleAllTabsClosure(request.timeLimit);  // Prioritize alarm setting
+        scheduleAllTabsClosure(request.timeLimit);
         incrementVisitCount();
-        setLastVisitDateToLocal();
+        chrome.storage.sync.get({ sessions: {} }, function(data) {
+          const sessions = data.sessions;
+          const currentSessionTimestamp = Date.now();
+          sessions[currentSessionTimestamp] = Date.now() + (request.timeLimit * 60 * 1000);
+          chrome.storage.sync.set({ sessions: sessions, currentSessionTimestamp: currentSessionTimestamp }, function() {
+              console.log(`Added key to sessions data structure: ${currentSessionTimestamp}`);
+          });
+        }); 
         chrome.storage.sync.set({temporaryRedirectDisable: true}, () => {
             console.log('Redirection disable flag updated to true');
         });
         setInterventionTabId(sender.tab.id);
-        setXOpenTimestamp(Date.now());
         chrome.tabs.create({ url: 'https://www.x.com' }, (newTab) => {
             console.log("In chrome.tabs.create after creating the first X tab of the session");
             getOpenXTabs().then((openXTabs) => {
@@ -328,7 +312,15 @@ const handleOnMessageBackground = (request, sender, sendResponse) => {
             });
         });
     } else if (request.action === "snooze") {
-        scheduleAllTabsClosure(request.minutes);  // Prioritize alarm setting
+        scheduleAllTabsClosure(request.minutes);
+        chrome.storage.sync.get({ sessions: {}, currentSessionTimestamp: Date.now()}, function(data) {
+          const sessions = data.sessions;
+          const currentSessionTimestamp = data.currentSessionTimestamp;
+          sessions[currentSessionTimestamp] = Date.now() + (request.minutes * 60 * 1000);
+          chrome.storage.sync.set({ sessions: sessions }, function() {
+              console.log(`Added ${request.minutes} to sessions key: ${currentSessionTimestamp}`);
+          });
+        }); 
         getOpenXTabs().then((openXTabs) => {
             if (openXTabs.size > 0) {
                 console.log(`Snooze for ${request.minutes} minutes requested`);
@@ -350,7 +342,7 @@ const handleTabsOnUpdated = (tabId, changeInfo, tab) => {
                 console.log(`Tab ${tabId} changed: ${changeInfo.url}. onUpdated listener alerted`);
                 if (changeInfo.url.startsWith("https://x.com")) {
                     console.log("Change listener found a URL with x.com in it (maybe a tab that was already on X). Tracking if new.");
-                    trackXTab(tabId);  // TODO: check that this is idempotent, because changes are coming in on the initial X window
+                    trackXTab(tabId);
                 // NOTE: if your if condition doesn't catch the x tab 
                 } else if (openXTabs.has(tabId)) {  // tab that was on x.com navigated away.
                     console.log(`Tab that was on X left to ${changeInfo.url}. Untracking tab id ${tabId}`);

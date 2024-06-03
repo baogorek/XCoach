@@ -17,7 +17,7 @@ body {
     max-width: 2048px;
 }
 
-#decisionDiv, #logoDiv, #visitCountGraphicsDiv, #visitMinutesGraphicsDiv {
+#decisionDiv, #logoDiv,  #scratchpad, #visitMinutesGraphicsDiv {
     border: 1px solid #ccc;
     padding: 20px;
     border-radius: 8px;
@@ -34,11 +34,28 @@ body {
     object-fit: contain;
 }
 
+.scratchpad-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#scratchpad-textarea {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    border: 3px #333;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    box-sizing: border-box;
+    resize: none;
+}
+
 canvas {
     max-width: 100%;
     height: auto;
 }
-
 
 #pageFooter {
     text-align: center;

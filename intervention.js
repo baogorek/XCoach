@@ -60,6 +60,7 @@ function addPriorityToList(priority, index) {
     priorityList.appendChild(li);
 }
 
+
 // Charting functions ---------
 
 function formatDate(date) {
@@ -203,4 +204,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Charting
     aggregateSessionTimes(createVisitMinutesChart);
+
+    // Scratchpad
+    const textarea = document.getElementById('scratchpad-textarea');
+
+    // Load saved content
+    chrome.storage.sync.get(['scratchpadContent'], function(result) {
+        if (result.scratchpadContent) {
+            textarea.value = result.scratchpadContent;
+        }
+    });
+
+    // Save content on input
+    textarea.addEventListener('input', function() {
+        const content = textarea.value;
+        chrome.storage.sync.set({ scratchpadContent: content }, function() {
+            console.log('Scratchpad content saved:', content);
+        });
+    });
 });

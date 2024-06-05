@@ -100,6 +100,10 @@ function aggregateSessionTimes(callback) {
             }, aggregatedTimes);
         }
 
+        if (!aggregatedTimes[currentDate]) {
+            aggregatedTimes[currentDate] = 0;
+        }
+
         console.log('Aggregated session times by date (in minutes):', aggregatedTimes);
         document.getElementById('minutes').innerText = aggregatedTimes[currentDate].toFixed(1);
 
@@ -113,47 +117,87 @@ function aggregateSessionTimes(callback) {
 
 function createVisitMinutesChart(dates, sessionDurations) {
     const ctxVisitMinutes = document.getElementById('visitMinutesChart').getContext('2d');
-    const targetDays = 3; // Minimum number of days to display
+    const targetDays = 5; // Minimum number of days to display
     const referenceValue = 60; // Arbitrary reference value for padding
     let meanLabel;
+    const currentDate = formatDate(new Date());
 
-    meanLabel = dates.length < targetDays ? "Arbitrary Reference for First 7 Days" : "Mean Visit Duration";
+    // Determine if there are enough days to calculate the mean
+    if (dates.length >= targetDays) {
+        meanLabel = "Mean Visit Duration";
 
-    // Generate a complete sequence of dates going backwards
-    const fullDateSequence = generateDateSequence(new Date(), targetDays);
-
-    // Create padded arrays for session durations and reference values
-    const paddedDurations = fullDateSequence.map(date => dates.includes(date) ? sessionDurations[dates.indexOf(date)] : null);
-    const paddedReference = Array(targetDays).fill(referenceValue);
-
-    const maxVisitMinutes = 1.05 * Math.max(referenceValue, ...sessionDurations);
-
-    let visitMinutesChart = new Chart(ctxVisitMinutes, {
-        type: 'line',
-        data: {
-            labels: fullDateSequence,
-            datasets: [{
-                label: 'Daily Visit Duration (minutes)',
-                data: paddedDurations,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }, {
-                label: meanLabel,
-                data: paddedReference,
-                borderColor: 'rgb(255, 159, 64)',
-                borderDash: [5, 5], // Dotted line
-                tension: 0.1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    suggestedMax: maxVisitMinutes
+        // Calculate mean excluding the current day if present
+        let sumDurations = 0;
+        let countDurations = 0;
+        dates.forEach((date, index) => {
+            if (date !== currentDate) {
+                sumDurations += sessionDurations[index];
+                countDurations++;
+            }
+        });
+        const meanVisitDuration = countDurations > 0 ? sumDurations / countDurations : 0;
+        
+        // Create the reference value array for the mean
+        const paddedReference = Array(dates.length).fill(meanVisitDuration);
+        
+        let visitMinutesChart = new Chart(ctxVisitMinutes, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Daily Visit Duration (minutes)',
+                    data: sessionDurations,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: meanLabel,
+                    data: paddedReference,
+                    borderColor: 'rgb(255, 159, 64)',
+                    borderDash: [5, 5], // Dotted line
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 1.05 * Math.max(...sessionDurations, meanVisitDuration)
+                    }
                 }
             }
-        }
-    });
+        });
+    } else {
+        // Handle cases where there isn't enough data to display mean
+        meanLabel = "Arbitrary Reference for First 7 Days";
+        const paddedReference = Array(dates.length).fill(referenceValue);
+
+        let visitMinutesChart = new Chart(ctxVisitMinutes, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Daily Visit Duration (minutes)',
+                    data: sessionDurations,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: meanLabel,
+                    data: paddedReference,
+                    borderColor: 'rgb(255, 159, 64)',
+                    borderDash: [5, 5], // Dotted line
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 1.05 * Math.max(...sessionDurations, referenceValue)
+                    }
+                }
+            }
+        });
+    }
 }
 
 

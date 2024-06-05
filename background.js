@@ -36,53 +36,37 @@ function showAlarms() {
     });
 }
 
-function replaceDailyDataWithTestData1() {
-    const testData = [
-        {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028}
-    ];
+function generateTestDataForDays(numDays) {
+    const endDate = new Date();
+    const testData = [];
 
-    chrome.storage.sync.set({'dailyData': testData}, function() {
-        console.log('dailyData has been replaced with test data.');
+    for (let day = 0; day < numDays; day++) {
+        const date = new Date();
+        date.setDate(endDate.getDate() - day);
+        const dateString = formatDate(date);
+
+        // Assume between 3 to 10 sessions per day
+        const sessionCount = Math.floor(Math.random() * 8 + 3);
+        let totalSeconds = 0;
+
+        for (let i = 0; i < sessionCount; i++) {
+            // Sessions last between 5 minutes to 120 minutes
+            const sessionDuration = Math.floor(Math.random() * 115 + 5) * 60;
+            totalSeconds += sessionDuration;
+        }
+
+        testData.push({ date: dateString, XVisitCount: sessionCount, XVisitSeconds: totalSeconds });
+    }
+
+    chrome.storage.sync.set({ dailyData: testData }, function() {
+        console.log(`Test data for ${numDays} days has been set.`);
     });
 }
 
-function replaceDailyDataWithTestData5() {
-    const testData = [
-        {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028},
-        {"date": "2024-02-02", "XVisitCount": 3, "XVisitSeconds": 6157},
-        {"date": "2024-02-03", "XVisitCount": 7, "XVisitSeconds": 5817},
-        {"date": "2024-02-04", "XVisitCount": 9, "XVisitSeconds": 6005},
-        {"date": "2024-02-05", "XVisitCount": 6, "XVisitSeconds": 6119}
-    ];
-
-    chrome.storage.sync.set({'dailyData': testData}, function() {
-        console.log('dailyData has been replaced with test data.');
-    });
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
 }
 
-function replaceDailyDataWithTestData15() {
-    const testData = [
-        {"date": "2024-02-01", "XVisitCount": 3, "XVisitSeconds": 6028},
-        {"date": "2024-02-02", "XVisitCount": 3, "XVisitSeconds": 6157},
-        {"date": "2024-02-03", "XVisitCount": 7, "XVisitSeconds": 5817},
-        {"date": "2024-02-04", "XVisitCount": 9, "XVisitSeconds": 6005},
-        {"date": "2024-02-05", "XVisitCount": 6, "XVisitSeconds": 6119},
-        {"date": "2024-02-06", "XVisitCount": 5, "XVisitSeconds": 5853},
-        {"date": "2024-02-07", "XVisitCount": 4, "XVisitSeconds": 5969},
-        {"date": "2024-02-08", "XVisitCount": 3, "XVisitSeconds": 6049},
-        {"date": "2024-02-09", "XVisitCount": 8, "XVisitSeconds": 6032},
-        {"date": "2024-02-10", "XVisitCount": 3, "XVisitSeconds": 5925},
-        {"date": "2024-02-11", "XVisitCount": 5, "XVisitSeconds": 6092},
-        {"date": "2024-02-12", "XVisitCount": 8, "XVisitSeconds": 5911},
-        {"date": "2024-02-13", "XVisitCount": 8, "XVisitSeconds": 6076},
-        {"date": "2024-02-14", "XVisitCount": 4, "XVisitSeconds": 6109},
-        {"date": "2024-02-15", "XVisitCount": 5, "XVisitSeconds": 6094}
-    ];
-
-    chrome.storage.sync.set({'dailyData': testData}, function() {
-        console.log('dailyData has been replaced with test data.');
-    });
-}
 
 // Data functions -----------------------------------------------------------
 

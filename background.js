@@ -36,36 +36,84 @@ function showAlarms() {
     });
 }
 
-function generateTestDataForDays(numDays) {
-    const endDate = new Date();
-    const testData = [];
 
-    for (let day = 0; day < numDays; day++) {
-        const date = new Date();
-        date.setDate(endDate.getDate() - day);
-        const dateString = formatDate(date);
+function generateTestDataForDays(numDays) {
+    const testData = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today's date to midnight.
+
+    for (let day = 1; day <= numDays; day++) { // Start from 1 to skip today
+        const dayDate = new Date(today);
+        dayDate.setDate(today.getDate() - day); // Subtract 'day' days from today
 
         // Assume between 3 to 10 sessions per day
         const sessionCount = Math.floor(Math.random() * 8 + 3);
-        let totalSeconds = 0;
 
         for (let i = 0; i < sessionCount; i++) {
-            // Sessions last between 5 minutes to 120 minutes
-            const sessionDuration = Math.floor(Math.random() * 115 + 5) * 60;
-            totalSeconds += sessionDuration;
-        }
+            // Sessions start between 0 to 23 hours of the day
+            const sessionStart = new Date(dayDate);
+            sessionStart.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0, 0);
+            const startTimestamp = sessionStart.getTime();
 
-        testData.push({ date: dateString, XVisitCount: sessionCount, XVisitSeconds: totalSeconds });
+            // Sessions last between 5 minutes to 120 minutes
+            const sessionEnd = new Date(sessionStart.getTime() + (Math.floor(Math.random() * 15 + 3) * 60000));
+            const endTimestamp = sessionEnd.getTime();
+
+            // Store the session with the start timestamp as key
+            testData[startTimestamp] = endTimestamp;
+        }
     }
 
-    chrome.storage.sync.set({ dailyData: testData }, function() {
-        console.log(`Test data for ${numDays} days has been set.`);
+    chrome.storage.sync.set({ sessions: testData }, function() {
+        console.log(`Test data for ${numDays} days (excluding today) has been set.`);
     });
 }
 
+
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+      return date.toISOString().split('T')[0]; // Returns date in YYYY-MM-DD format
 }
+
+function aggregateSessionTimes(callback) {
+    chrome.storage.sync.get({ sessions: {} }, function(data) {
+        const sessions = data.sessions;
+        const aggregatedTimes = {};
+        const currentDate = formatDate(new Date());
+
+        if (Object.keys(sessions).length === 0) {
+            aggregatedTimes[currentDate] = 0;
+        } else {
+            Object.entries(sessions).reduce((acc, [start, end]) => {
+                const startDate = formatDate(new Date(parseInt(start)));
+                const sessionDurationMinutes = (end - start) / (1000 * 60);
+                acc[startDate] = (acc[startDate] || 0) + sessionDurationMinutes;
+                return acc;
+            }, aggregatedTimes);
+        }
+
+        if (!aggregatedTimes[currentDate]) {
+            aggregatedTimes[currentDate] = 0;
+        }
+
+        console.log('Aggregated session times by date (in minutes):', aggregatedTimes);
+
+        const dates = Object.keys(aggregatedTimes);
+        const sessionDurations = Object.values(aggregatedTimes);
+
+        callback(dates, sessionDurations);
+    });
+}
+
+function printAggregatedTimes(dates, sessionDurations) {
+    console.log("Aggregated Times:");
+    dates.forEach((date, index) => {
+        console.log(`${date}: ${sessionDurations[index]} minutes`);
+    });
+}
+
+// See the aggregated session times rolled up to days with this:
+// aggregateSessionTimes(printAggregatedTimes);
+
 
 
 // Data functions -----------------------------------------------------------

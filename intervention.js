@@ -168,16 +168,26 @@ function createVisitMinutesChart(dates, sessionDurations) {
         });
     } else {
         // Handle cases where there isn't enough data to display mean
-        meanLabel = "Arbitrary Reference for First 7 Days";
-        const paddedReference = Array(dates.length).fill(referenceValue);
+        meanLabel = `Arbitrary Reference for First ${targetDays} Days`;
 
+        console.log(dates);
+        const additionalDates = generateDateSequence(new Date(dates[0]), targetDays - dates.length + 1).slice(1);
+        console.log(additionalDates);
+
+        paddedDateSequence = additionalDates.concat(dates);
+        console.log(paddedDateSequence);  // looks right
+
+        paddedDurations = Array(targetDays - sessionDurations.length).fill(null).concat(sessionDurations);
+        paddedReference = Array(targetDays).fill(referenceValue);
+        // TODO: delete some of these comments 
+        // aggregateSessionTimes(printAggregatedTimes);
         let visitMinutesChart = new Chart(ctxVisitMinutes, {
             type: 'line',
             data: {
-                labels: dates,
+                labels: paddedDateSequence,
                 datasets: [{
                     label: 'Daily Visit Duration (minutes)',
-                    data: sessionDurations,
+                    data: paddedDurations,
                     borderColor: 'rgb(75, 192, 192)',
                     tension: 0.1
                 }, {
@@ -192,7 +202,7 @@ function createVisitMinutesChart(dates, sessionDurations) {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        suggestedMax: 1.05 * Math.max(...sessionDurations, referenceValue)
+                        suggestedMax: 1.05 * Math.max(...paddedDurations, referenceValue)
                     }
                 }
             }

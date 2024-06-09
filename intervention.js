@@ -1,4 +1,4 @@
-// console.log = function() {};
+console.log = function() {};
 
 // Functions --------------------
 
@@ -179,8 +179,6 @@ function createVisitMinutesChart(dates, sessionDurations) {
 
         paddedDurations = Array(targetDays - sessionDurations.length).fill(null).concat(sessionDurations);
         paddedReference = Array(targetDays).fill(referenceValue);
-        // TODO: delete some of these comments 
-        // aggregateSessionTimes(printAggregatedTimes);
         let visitMinutesChart = new Chart(ctxVisitMinutes, {
             type: 'line',
             data: {
@@ -266,6 +264,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     chrome.storage.sync.get(['scratchpadContent'], function(result) {
         if (result.scratchpadContent) {
             textarea.value = result.scratchpadContent;
+        }
+        else {
+            textarea.value = 'Type your notes or thoughts here...';
         }
     });
 

@@ -69,9 +69,132 @@ function generateTestDataForDays(numDays) {
     });
 }
 
+function condenseSessionsData() {
+    const currentDate = formatDate(new Date());
+
+    chrome.storage.sync.get(['sessions'], function(data) {
+        if (!data.sessions) {
+            console.log("No sessions data to condense.");
+            return;
+        }
+
+        const sessions = data.sessions;
+        const condensedSessions = {};
+
+        // Maintain a separate object to keep track of current day's sessions
+        const currentDaySessions = {};
+
+        // Aggregate sessions by day, but condense them into a single session per day
+        Object.entries(sessions).forEach(([start, end]) => {
+            const startDate = formatDate(new Date(parseInt(start)));
+
+            if (startDate === currentDate) {
+                // Directly add current day sessions to a separate object
+                currentDaySessions[start] = end;
+                return;
+            }
+          
+            if (!condensedSessions[startDate]) {
+                // Initialize with the start time and end time if first entry of the day
+                condensedSessions[startDate] = { start: parseInt(start), end: parseInt(end) };
+            } else {
+                // Update the end time to include the current session's duration
+                condensedSessions[startDate].end += (parseInt(end) - parseInt(start));
+            }
+        });
+
+        // Adjust the condensed sessions to reflect actual start and end times
+        const adjustedSessions = {};
+        Object.entries(condensedSessions).forEach(([date, session]) => {
+            adjustedSessions[session.start] = session.start + (session.end - session.start);
+        });
+
+        // Merge current day's sessions into the adjusted sessions object
+        Object.assign(adjustedSessions, currentDaySessions);
+
+        // Save the adjusted sessions back to storage
+        chrome.storage.sync.set({sessions: adjustedSessions}, function() {
+            if (chrome.runtime.lastError) {
+                console.log("Error saving condensed sessions data:", chrome.runtime.lastError);
+            } else {
+                console.log("Condensed sessions data saved successfully, including current day's sessions.");
+            }
+        });
+    });
+}
+
+
+function condenseSessionsData() {
+    const currentDate = formatDate(new Date());
+    const currentDateTime = new Date().getTime();
+    const days180AgoTime = currentDateTime - (180 * 24 * 60 * 60 * 1000);  // milliseconds for 180 days
+
+    chrome.storage.sync.get(['sessions'], function(data) {
+        if (!data.sessions) {
+            console.log("No sessions data to condense.");
+            return;
+        }
+
+        const sessions = data.sessions;
+        const condensedSessions = {};
+        const currentDaySessions = {};
+
+        Object.entries(sessions).forEach(([start, end]) => {
+            const startDate = formatDate(new Date(parseInt(start)));
+            const startTime = parseInt(start);
+
+            // Check if the session is within the last 180 days
+            if (startTime < days180AgoTime) {
+                return; // Skip this session if it's older than 180 days
+            }
+
+            if (startDate === currentDate) {
+                // Preserve the current day's sessions separately
+                currentDaySessions[start] = end;
+                return;
+            }
+
+            if (!condensedSessions[startDate]) {
+                condensedSessions[startDate] = { start: startTime, end: parseInt(end) };
+            } else {
+                condensedSessions[startDate].end += (parseInt(end) - startTime);
+            }
+        });
+
+        // Adjust and combine condensed sessions
+        const adjustedSessions = {};
+        Object.entries(condensedSessions).forEach(([date, session]) => {
+            adjustedSessions[session.start] = session.start + (session.end - session.start);
+        });
+
+        // Include the current day's sessions
+        Object.assign(adjustedSessions, currentDaySessions);
+
+        // Save the adjusted sessions back to storage
+        chrome.storage.sync.set({sessions: adjustedSessions}, function() {
+            if (chrome.runtime.lastError) {
+                console.log("Error saving condensed sessions data:", chrome.runtime.lastError);
+            } else {
+                console.log("Condensed sessions data saved successfully, including current day and last 180 days.");
+            }
+        });
+    });
+}
 
 function formatDate(date) {
       return date.toISOString().split('T')[0]; // Returns date in YYYY-MM-DD format
+}
+
+function checkSessionsCount() {
+    chrome.storage.sync.get(['sessions'], function(data) {
+        if (data.sessions) {
+            const sessions = data.sessions;
+            const numberOfSessions = Object.keys(sessions).length;
+            console.log("Number of session keys:", numberOfSessions);
+        } else {
+            console.log("No sessions data found.");
+        }
+    });
 }
 
 function aggregateSessionTimes(callback) {
@@ -317,6 +440,7 @@ chrome.runtime.onStartup.addListener(() => {
     });
     setOpenXTabs(new Set());
     wipeTimers();
+    condenseSessionsData();
 }); 
 
 const handleOnMessageBackground = (request, sender, sendResponse) => { 

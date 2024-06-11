@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "XCoach",
-    "version": "1.0",
+    "version": "2.0",
     "permissions": [
       "tabs",
       "storage",
@@ -26,7 +26,6 @@
         "128": "images/icon128.png"
     },
     "host_permissions": [
-        "*://*.twitter.com/*",
         "*://*.x.com/*"
     ],
     "web_accessible_resources": [
@@ -37,7 +36,7 @@
     ],
     "content_scripts": [
         {
-            "matches": ["*://twitter.com/*"],
+            "matches": ["*://x.com/*"],
             "js": ["content-modify.js"]
         }
     ]

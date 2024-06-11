@@ -1,7 +1,7 @@
 console.log = function() {};
 
 // The Intervention mechanism -------
-chrome.storage.local.get('temporaryRedirectDisable', function(data) {
+chrome.storage.sync.get('temporaryRedirectDisable', function(data) {
     console.log(data);
     if (!data.temporaryRedirectDisable) {
         const interventionUrl = chrome.runtime.getURL("intervention.html");
@@ -31,12 +31,13 @@ handleOnMessageContent = (request, sender, sendResponse) => {
         warningBanner.style.paddingBottom = '10px';
         warningBanner.style.borderRadius = '10px';
         warningBanner.style.zIndex = '1000';
-        warningBanner.innerText = 'Your XCoach: This tab will close in under a minute!';
+        warningBanner.innerText = 'XCoach: X tabs will close in under a minute!';
 
         // Dismiss button
         let dismissBtn = document.createElement('button');
         dismissBtn.innerText = 'Dismiss';
         dismissBtn.style.marginLeft = '15px';
+        dismissBtn.style.backgroundColor = '#555555';
         dismissBtn.onclick = function() {
             warningBanner.remove();
         };
@@ -44,13 +45,41 @@ handleOnMessageContent = (request, sender, sendResponse) => {
 
         // Snooze button
         let snoozeBtn = document.createElement('button');
-        snoozeBtn.innerText = 'Snooze (2 min)';
+        snoozeBtn.innerText = 'Snooze';
+        snoozeBtn.style.backgroundColor = '#555555';
         snoozeBtn.style.marginLeft = '15px';
         snoozeBtn.onclick = function() {
-            chrome.runtime.sendMessage({ action: "snooze", tabId: request.tabId });
+            let snoozeMinutes = parseInt(snoozeInput.value, 10);
+            if (!isNaN(snoozeMinutes) && snoozeMinutes >= 2 && snoozeMinutes <= 120) {
+                chrome.runtime.sendMessage({ action: "snooze", minutes: snoozeMinutes });
+            } else {
+                alert('Please enter a valid number of minutes between 2 and 120.');
+            }
         };
         warningBanner.appendChild(snoozeBtn);
 
+        // Input box for custom snooze time
+        let snoozeInput = document.createElement('input');
+        snoozeInput.type = 'number';
+        snoozeInput.value = '2';
+        snoozeInput.min = '2';
+        snoozeInput.max = '120';
+        snoozeInput.step = '1';
+        snoozeInput.style.marginLeft = '15px';
+        snoozeInput.style.padding = '5px';
+        snoozeInput.style.borderRadius = '5px';
+        snoozeInput.style.border = '1px solid #ccc';
+        snoozeInput.style.width = '40px';
+        warningBanner.appendChild(snoozeInput);
+
+        // Finish word minutes
+        let minutesText = document.createElement('span');
+        minutesText.innerText = 'minutes';
+        minutesText.style.marginLeft = '5px';
+        minutesText.style.color = 'white'; // Ensure text color matches the banner
+        warningBanner.appendChild(minutesText);
+
+        // Finished creating the warning banner
         document.body.appendChild(warningBanner);
         sendResponse();
 

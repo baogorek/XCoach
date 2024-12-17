@@ -25,7 +25,7 @@
 
             <h1>Proceed to X</h1> 
             <div id="decision">
-                <input type="number" id="timeLimit" placeholder="Session Minutes" min="2">
+                <input type="number" id="timeLimit" placeholder="Session Minutes" min="2" autofocus>
                 <button id="proceedToX">Start Session</button>
             </div>
         </div>
@@ -35,10 +35,42 @@
             <h1>The XCoach is glad you're here!</h1>
         </div>
 
-        <div id="scratchpad">
+        <div id="scratchpad-and-controls">
+          <div class="scratchpad-content">
             <div class="scratchpad-title">Stray Thoughts</div>
             <textarea id="scratchpad-textarea"></textarea>
-        </div>
+          </div>
+          <div class="management-title">
+            Data Management Zone
+            <span class="info-icon" title="Click for more information">i</span>
+          </div>
+          <div class="data-controls">
+            <div class="data-management">
+                <button id="downloadData">Download Data</button>
+                <button id="deleteData">Delete Data</button>
+            </div>
+            <div class="time-period-controls">
+                <div class="days-input">
+                    <label for="daysNumber">Days:</label>
+                    <input type="number" id="daysNumber" min="1" value="1">
+                </div>
+                <div class="period-selection">
+                    <div>
+                        <input type="radio" id="daysFromPresent" name="timePeriod" value="fromPresent" checked>
+                        <label for="daysFromPresent">From present</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="daysFromBeginning" name="timePeriod" value="fromBeginning">
+                        <label for="daysFromBeginning">From beginning</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="totalReset" name="timePeriod" value="totalReset">
+                        <label for="totalReset">Total reset</label>
+                    </div>
+                </div>
+            </div>
+          </div>
+      </div>
 
         <div id="visitMinutesGraphicsDiv">
             <canvas id="visitMinutesChart"></canvas>

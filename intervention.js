@@ -277,4 +277,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('Scratchpad content saved:', content);
         });
     });
+
+   // Data management info icon
+   const infoIcon = document.querySelector('.info-icon');
+   
+   infoIcon.addEventListener('click', function() {
+       alert('The Data Management Zone exists because:\n\n' + 
+             '- You may wish to download your X usage data (csv)\n' + 
+             '- There may have been problems with a few data points\n' + 
+             '- The graph may have too much data on it\n' + 
+             '- You\'d like a complete reset of the extension (a full data wipe)\n' + 
+             '- If you don\'t eventually delete some data, you\'ll get errors in a few months\n\n' +
+             'My recommendation is to do a complete reset about every 2 months, and to fix any ' +
+             'data anomalies that occur on an ad hoc basis. If you want a more permanent history ' +
+             'download your data and store the csv files somewhere safe. I did the best I could to make the ' +
+             'data collection mechanism robust, but every once in a while, something weird happens. - Ben' 
+       );
+   });  
+  
 });

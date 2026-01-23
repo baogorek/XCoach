@@ -31,48 +31,46 @@
         </div>
 
         <div id="logoDiv">
+            <h2>The XCoach Chrome Extension</h2>
+            <p class="logo-byline">by Ben Ogorek</p>
             <img src="images/icon1024.png" alt="XCoach Logo">
-            <h1>The XCoach is glad you're here!</h1>
+            <p class="logo-tagline">Don't let X ruin your life.</p>
+            <ul class="logo-features">
+                <li>Timed sessions to resist the impulse to scroll</li>
+                <li>Priority reminders before every visit</li>
+                <li>Post-as-handle display to prevent identity mishaps</li>
+            </ul>
         </div>
 
         <div id="data-management-div">
-          <div class="management-title">
-            Data Management Zone
-            <span class="info-icon" title="Click for more information">i</span>
-          </div>
+          <div class="management-title">Data Management Zone</div>
+          <p class="data-subtitle">Reset about every 2 months to prevent storage errors. Download your data (CSV) first if you want to keep it.</p>
           <div class="data-controls">
-            <div class="data-management">
-                <button id="downloadData">Download Data</button>
-                <button id="deleteData">Delete Data</button>
-            </div>
-            <div class="time-period-controls">
-                <div class="days-input">
-                    <label for="daysNumber">Days:</label>
-                    <input type="number" id="daysNumber" min="1" value="1">
-                </div>
+            <div class="delete-controls">
                 <div class="period-selection">
                     <div>
                         <input type="radio" id="daysFromPresent" name="timePeriod" value="fromPresent" checked>
-                        <label for="daysFromPresent">From present</label>
+                        <label for="daysFromPresent">Most recent</label>
                     </div>
                     <div>
                         <input type="radio" id="daysFromBeginning" name="timePeriod" value="fromBeginning">
-                        <label for="daysFromBeginning">From beginning</label>
+                        <label for="daysFromBeginning">Oldest</label>
                     </div>
                     <div>
                         <input type="radio" id="totalReset" name="timePeriod" value="totalReset">
                         <label for="totalReset">Total reset</label>
                     </div>
                 </div>
+                <div class="days-input">
+                    <input type="number" id="daysNumber" min="1" value="1">
+                    <label for="daysNumber">days</label>
+                </div>
+            </div>
+            <div class="data-actions">
+                <button id="deleteData">Delete Data</button>
+                <button id="downloadData">Download Data</button>
             </div>
           </div>
-          <ul class="data-tips">
-            <li>If the app stops working, clear out some data</li>
-            <li>Download your data before deleting if you want to keep it</li>
-            <li><b>From present</b> = delete the most recent N days</li>
-            <li><b>From beginning</b> = delete the oldest N days</li>
-            <li><b>Total reset</b> = wipe everything</li>
-          </ul>
         </div>
 
         <div id="visitMinutesGraphicsDiv">

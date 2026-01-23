@@ -257,22 +257,82 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Charting
     aggregateSessionTimes(createVisitMinutesChart);
 
+    // Data management
+    document.getElementById('downloadData').addEventListener('click', function() {
+        chrome.storage.sync.get({ sessions: {} }, function(data) {
+            const sessions = data.sessions;
+            const rows = [['start_timestamp', 'end_timestamp', 'date', 'duration_minutes']];
+            Object.entries(sessions).forEach(([start, end]) => {
+                const startInt = parseInt(start);
+                const date = formatDate(new Date(startInt));
+                const duration = ((end - startInt) / 60000).toFixed(2);
+                rows.push([start, end, date, duration]);
+            });
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'xcoach_sessions_' + formatDate(new Date()) + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    });
 
-   // Data management info icon
-   const infoIcon = document.querySelector('.info-icon');
-   
-   infoIcon.addEventListener('click', function() {
-       alert('The Data Management Zone exists because:\n\n' + 
-             '- You may wish to download your X usage data (csv)\n' + 
-             '- There may have been problems with a few data points\n' + 
-             '- The graph may have too much data on it\n' + 
-             '- You\'d like a complete reset of the extension (a full data wipe)\n' + 
-             '- If you don\'t eventually delete some data, you\'ll get errors in a few months\n\n' +
-             'My recommendation is to do a complete reset about every 2 months, and to fix any ' +
-             'data anomalies that occur on an ad hoc basis. If you want a more permanent history ' +
-             'download your data and store the csv files somewhere safe. I did the best I could to make the ' +
-             'data collection mechanism robust, but every once in a while, something weird happens. - Ben' 
-       );
-   });  
-  
+    document.getElementById('deleteData').addEventListener('click', function() {
+        const timePeriod = document.querySelector('input[name="timePeriod"]:checked').value;
+        const days = parseInt(document.getElementById('daysNumber').value, 10);
+
+        if (timePeriod === 'totalReset') {
+            if (!confirm('This will delete ALL session data. Are you sure?')) return;
+            chrome.storage.sync.set({ sessions: {} }, function() {
+                alert('All data deleted.');
+                location.reload();
+            });
+            return;
+        }
+
+        if (isNaN(days) || days < 1) {
+            alert('Enter a valid number of days.');
+            return;
+        }
+
+        chrome.storage.sync.get({ sessions: {} }, function(data) {
+            const sessions = data.sessions;
+            const cutoff = new Date();
+            cutoff.setHours(0, 0, 0, 0);
+
+            const sessionDates = [...new Set(
+                Object.keys(sessions).map(ts => formatDate(new Date(parseInt(ts))))
+            )].sort();
+
+            let datesToDelete;
+            if (timePeriod === 'fromPresent') {
+                datesToDelete = new Set(sessionDates.slice(-days));
+            } else {
+                datesToDelete = new Set(sessionDates.slice(0, days));
+            }
+
+            const filtered = {};
+            Object.entries(sessions).forEach(([start, end]) => {
+                const date = formatDate(new Date(parseInt(start)));
+                if (!datesToDelete.has(date)) {
+                    filtered[start] = end;
+                }
+            });
+
+            const deleted = Object.keys(sessions).length - Object.keys(filtered).length;
+            if (deleted === 0) {
+                alert('No sessions found in that range.');
+                return;
+            }
+            if (!confirm('Delete ' + deleted + ' session(s) from ' + datesToDelete.size + ' day(s)?')) return;
+
+            chrome.storage.sync.set({ sessions: filtered }, function() {
+                alert(deleted + ' session(s) deleted.');
+                location.reload();
+            });
+        });
+    });
+
 });

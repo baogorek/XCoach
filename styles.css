@@ -17,7 +17,7 @@ body {
     max-width: 2048px;
 }
 
-#decisionDiv, #logoDiv,  #scratchpad-and-controls, #visitMinutesGraphicsDiv {
+#decisionDiv, #logoDiv, #data-management-div, #visitMinutesGraphicsDiv {
     border: 1px solid #ccc;
     padding: 20px;
     border-radius: 8px;
@@ -34,38 +34,28 @@ body {
     object-fit: contain;
 }
 
-#scratchpad-and-controls {
+#data-management-div {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.scratchpad-content {
-    flex: 2;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.data-tips {
+    text-align: left;
+    font-size: 14px;
+    color: #555;
+    padding-left: 20px;
+    margin: 0;
+    line-height: 1.8;
 }
 
-.scratchpad-title, .management-title {
+.management-title {
     font-size: 1.5em;
     font-weight: bold;
     margin-bottom: 10px;
     width: 100%;
     text-align: center;
     position: relative;
-}
-
-#scratchpad-textarea {
-    width: 100%;
-    flex: 1;
-    border-radius: 20px;
-    border: 1px solid #ddd;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    padding: 10px;
-    box-sizing: border-box;
-    resize: none;
 }
 
 .data-controls {

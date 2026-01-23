@@ -257,26 +257,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Charting
     aggregateSessionTimes(createVisitMinutesChart);
 
-    // Scratchpad
-    const textarea = document.getElementById('scratchpad-textarea');
-
-    // Load saved content
-    chrome.storage.sync.get(['scratchpadContent'], function(result) {
-        if (result.scratchpadContent) {
-            textarea.value = result.scratchpadContent;
-        }
-        else {
-            textarea.value = 'Type your notes or thoughts here...';
-        }
-    });
-
-    // Save content on input
-    textarea.addEventListener('input', function() {
-        const content = textarea.value;
-        chrome.storage.sync.set({ scratchpadContent: content }, function() {
-            console.log('Scratchpad content saved:', content);
-        });
-    });
 
    // Data management info icon
    const infoIcon = document.querySelector('.info-icon');

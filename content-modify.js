@@ -7,9 +7,71 @@ chrome.storage.sync.get('temporaryRedirectDisable', function(data) {
         const interventionUrl = chrome.runtime.getURL("intervention.html");
         console.log("InterventionURL is", interventionUrl);
         window.location.href = interventionUrl;
+    } else {
+        initPostButtonModifier();
     }
 });
 // End Intervention mechanism ------
+
+// Post button modifier - shows "Post as @handle" ------
+function getCurrentHandle() {
+    const switcher = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
+    if (switcher) {
+        for (const span of switcher.querySelectorAll('span')) {
+            const text = span.textContent.trim();
+            if (text.startsWith('@')) return text;
+        }
+    }
+    const profileLink = document.querySelector('[data-testid="AppTabBar_Profile_Link"]');
+    if (profileLink) {
+        const href = profileLink.getAttribute('href');
+        if (href) return '@' + href.replace('/', '');
+    }
+    return null;
+}
+
+function modifyPostButtons(handle) {
+    const selectors = '[data-testid="tweetButton"], [data-testid="tweetButtonInline"]';
+    document.querySelectorAll(selectors).forEach(button => {
+        if (button.dataset.xcoachHandleApplied) return;
+        const innerSpan = button.querySelector('span > span');
+        if (innerSpan && innerSpan.textContent.trim() === 'Post') {
+            innerSpan.textContent = 'Post as ' + handle;
+            button.dataset.xcoachHandleApplied = 'true';
+        }
+    });
+}
+
+function initPostButtonModifier() {
+    let cachedHandle = null;
+    let debounceTimer = null;
+    let lastUrl = location.href;
+
+    function processDOM() {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            cachedHandle = null;
+        }
+        if (!cachedHandle) cachedHandle = getCurrentHandle();
+        if (cachedHandle) modifyPostButtons(cachedHandle);
+    }
+
+    const observer = new MutationObserver(() => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(processDOM, 300);
+    });
+
+    if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true });
+        processDOM();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            observer.observe(document.body, { childList: true, subtree: true });
+            processDOM();
+        });
+    }
+}
+// End Post button modifier ------
 
 // Runtime message handler ----- 
 handleOnMessageContent = (request, sender, sendResponse) => {

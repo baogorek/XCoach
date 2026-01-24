@@ -25,19 +25,52 @@
 
             <h1>Proceed to X</h1> 
             <div id="decision">
-                <input type="number" id="timeLimit" placeholder="Session Minutes" min="2">
+                <input type="number" id="timeLimit" placeholder="Session Minutes" min="2" autofocus>
                 <button id="proceedToX">Start Session</button>
             </div>
         </div>
 
         <div id="logoDiv">
+            <h2>The XCoach Chrome Extension</h2>
+            <p class="logo-byline">by Ben Ogorek</p>
             <img src="images/icon1024.png" alt="XCoach Logo">
-            <h1>The XCoach is glad you're here!</h1>
+            <p class="logo-tagline">Don't let X ruin your life.</p>
+            <ul class="logo-features">
+                <li>Timed sessions to resist the impulse to scroll</li>
+                <li>Priority reminders before every visit</li>
+                <li>Post-as-handle display to prevent identity mishaps</li>
+            </ul>
         </div>
 
-        <div id="scratchpad">
-            <div class="scratchpad-title">Stray Thoughts</div>
-            <textarea id="scratchpad-textarea"></textarea>
+        <div id="data-management-div">
+          <div class="management-title">Data Management Zone</div>
+          <p class="data-subtitle">Reset about every 2 months to prevent storage errors. Download your data (CSV) first if you want to keep it.</p>
+          <div class="data-controls">
+            <div class="delete-controls">
+                <div class="period-selection">
+                    <div>
+                        <input type="radio" id="daysFromPresent" name="timePeriod" value="fromPresent" checked>
+                        <label for="daysFromPresent">Most recent</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="daysFromBeginning" name="timePeriod" value="fromBeginning">
+                        <label for="daysFromBeginning">Oldest</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="totalReset" name="timePeriod" value="totalReset">
+                        <label for="totalReset">Total reset</label>
+                    </div>
+                </div>
+                <div class="days-input">
+                    <input type="number" id="daysNumber" min="1" value="1">
+                    <label for="daysNumber">days</label>
+                </div>
+            </div>
+            <div class="data-actions">
+                <button id="deleteData">Delete Data</button>
+                <button id="downloadData">Download Data</button>
+            </div>
+          </div>
         </div>
 
         <div id="visitMinutesGraphicsDiv">
@@ -48,8 +81,7 @@
 
     <div id="pageFooter">
       <a href="https://medium.com/@baogorek/xcoach-a-chrome-extension-for-a-desktop-x-addiction-c229161c455a" target="_blank">About</a>
-      <a href="https://us21.list-manage.com/contact-form?u=14a6103181dad2d5ea87f83c8&form_id=af44a2d187fa4f66659241aff57d2d28" target="_blank">Submit Issues or Feedback </a>
-      <a href="http://eepurl.com/iKqI_k" target="_blank">Join the XCoach Mailing List</a>
+      <a href="https://x.com/BenOgorek" target="_blank">Contact / Feedback (@BenOgorek)</a>
     </div>
 
     <script src="lib/chart.umd.js"></script>

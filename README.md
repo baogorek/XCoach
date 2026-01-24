@@ -21,6 +21,14 @@ When you navigate to x.com, XCoach intercepts the page and shows an intervention
 3. Enable "Developer mode"
 4. Click "Load unpacked" and select the project directory
 
+## Development
+
+To generate test data for screenshots or debugging, open the service worker console (`chrome://extensions` → XCoach → "Service Worker") and run:
+
+```javascript
+generateTestDataForDays(30)
+```
+
 ## About
 
 Read more: [XCoach: A Chrome Extension for a Desktop X Addiction](https://medium.com/@baogorek/xcoach-a-chrome-extension-for-a-desktop-x-addiction-c229161c455a)
